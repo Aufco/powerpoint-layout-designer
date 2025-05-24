@@ -17,34 +17,22 @@ app = Flask(__name__)
 # Initialize OpenAI client (users should set OPENAI_API_KEY environment variable)
 openai_client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
-def calculate_character_limit(width_inches, height_inches, font_size_pt):
-    """Calculate approximate character limit based on box dimensions and font size"""
-    # Approximate character width in inches (varies by font, using average)
-    char_width_inches = font_size_pt * 0.0104  # Approximate for Arial
-    
-    # Approximate line height in inches (1.2x font size is common)
-    line_height_inches = font_size_pt * 0.0125 * 1.2
-    
-    # Calculate characters per line and number of lines
-    chars_per_line = int(width_inches / char_width_inches)
-    num_lines = int(height_inches / line_height_inches)
-    
-    # Total character limit with some margin for word wrapping
-    total_chars = int(chars_per_line * num_lines * 0.85)  # 85% to account for word spacing
-    
-    return max(50, total_chars)  # Minimum 50 characters
 
 def parse_bullet_points(content):
-    """Parse content and extract bullet points"""
-    # Look for lines starting with - or •
+    """Parse content and extract bullet points, removing any bullet symbols"""
     lines = content.strip().split('\n')
     bullet_points = []
     
     for line in lines:
         line = line.strip()
-        if line.startswith(('- ', '• ', '* ', '· ')):
-            # Remove bullet marker and clean up
+        # Remove any bullet symbols that might be present
+        if line.startswith(('- ', '• ', '* ', '· ', '○ ', '▪ ', '‣ ')):
             bullet_text = line[2:].strip()
+            if bullet_text:
+                bullet_points.append(bullet_text)
+        elif line.startswith('-'):
+            # Handle cases where there's just a dash without space
+            bullet_text = line[1:].strip()
             if bullet_text:
                 bullet_points.append(bullet_text)
         elif line and not any(line.lower().startswith(word) for word in ['slide', 'title:', 'content:']):
@@ -53,27 +41,6 @@ def parse_bullet_points(content):
     
     return bullet_points
 
-def adjust_font_size_for_content(content, width_inches, height_inches, initial_font_size):
-    """Adjust font size if content exceeds box capacity"""
-    min_font_size = 12
-    max_font_size = initial_font_size
-    
-    # Start with initial font size
-    font_size = initial_font_size
-    
-    # Calculate content length
-    content_length = len(content)
-    
-    # Try different font sizes until content fits
-    while font_size >= min_font_size:
-        char_limit = calculate_character_limit(width_inches, height_inches, font_size)
-        
-        if content_length <= char_limit:
-            break
-            
-        font_size -= 2  # Decrease by 2 points
-    
-    return max(font_size, min_font_size)
 
 @app.route('/')
 def index():
@@ -190,7 +157,7 @@ def generate_textbox_code(element, index):
             f"            p = text_frame_{index}.paragraphs[0]",
             f"        else:",
             f"            p = text_frame_{index}.add_paragraph()",
-            f"        p.text = item.strip().lstrip('- •')",
+            f"        p.text = item.strip().lstrip('- •*·○▪‣')",
             f"        p.level = 0  # First level bullet",
             f"        # Format the paragraph",
             f"        for run in p.runs:",
@@ -297,28 +264,6 @@ def generate_content():
     if not slides:
         return jsonify({'error': 'Slides are required'}), 400
     
-    # Get typical content box dimensions from layout
-    content_box = None
-    if content_layout and 'elements' in content_layout:
-        for element in content_layout['elements']:
-            if element['type'] == 'textbox':
-                content_box = element
-                break
-    
-    # Default dimensions if no layout provided
-    if not content_box:
-        content_box = {
-            'width': 8,  # inches
-            'height': 4,  # inches
-            'font_size': 18
-        }
-    
-    # Calculate character limit for content
-    char_limit = calculate_character_limit(
-        content_box['width'], 
-        content_box['height'], 
-        content_box.get('font_size', 18)
-    )
     
     try:
         # Generate content for each slide
@@ -327,7 +272,7 @@ def generate_content():
                 response = openai_client.chat.completions.create(
                     model="gpt-3.5-turbo",
                     messages=[
-                        {"role": "system", "content": f"You are a presentation content writer. Create bullet points for PowerPoint slides. Format each point starting with '- '. Keep total content under {char_limit} characters to fit the slide. Be concise and impactful."},
+                        {"role": "system", "content": "You are a presentation content writer. Create bullet points for PowerPoint slides. Provide each point as a separate line without any bullet symbols or dashes. Be concise and impactful."},
                         {"role": "user", "content": f"Create content for this slide about '{topic}':\nSlide title: {slide['title']}\n\nProvide 3-5 bullet points. Each bullet should be concise and fit on 1-2 lines."}
                     ],
                     max_tokens=200,
@@ -415,14 +360,6 @@ def create_presentation():
                             # For content slides, parse and add bullet points
                             bullet_points = parse_bullet_points(content)
                             
-                            # Calculate optimal font size based on content length
-                            optimal_font_size = adjust_font_size_for_content(
-                                content,
-                                element['width'],
-                                element['height'],
-                                element.get('font_size', 18)
-                            )
-                            
                             if bullet_points and element.get('list_type', 'bullet') == 'bullet':
                                 # Add bullet points
                                 for i, bullet_text in enumerate(bullet_points):
@@ -434,11 +371,11 @@ def create_presentation():
                                     p.text = bullet_text
                                     p.level = 0  # First level bullet
                                     
-                                    # Apply formatting with adjusted font size
+                                    # Apply formatting
                                     for run in p.runs:
                                         font = run.font
                                         font.name = element.get('font_name', 'Arial')
-                                        font.size = Pt(optimal_font_size)
+                                        font.size = Pt(element.get('font_size', 18))
                             else:
                                 # Plain text without bullets
                                 p = text_frame.paragraphs[0]
@@ -447,7 +384,7 @@ def create_presentation():
                                 for run in p.runs:
                                     font = run.font
                                     font.name = element.get('font_name', 'Arial')
-                                    font.size = Pt(optimal_font_size)
+                                    font.size = Pt(element.get('font_size', 18))
         
         # Save presentation to memory
         file_buffer = io.BytesIO()
