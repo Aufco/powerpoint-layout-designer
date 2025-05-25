@@ -449,6 +449,17 @@
             <h2>Layout Designer</h2>
             
             <div class="section">
+                <h3>Template Selection</h3>
+                <div class="form-group">
+                    <label>Content Template:</label>
+                    <select id="template-selector" onchange="changeTemplate()">
+                        <option value="standard">Standard Content Template</option>
+                        <option value="with-image">My Content Template (with Image)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="section">
                 <h3>Add Elements</h3>
                 <button class="btn" onclick="addElement('title')">Add Title Box</button>
                 <button class="btn" onclick="addElement('textbox')">Add Text Box</button>
@@ -618,6 +629,7 @@
         let generatedFilename = '';
         let currentSlides = [];
         let currentTopic = '';
+        let currentTemplate = 'standard';
         
         // Store separate layouts for title and content slides
         let savedLayouts = {
@@ -634,57 +646,124 @@
 
         // Standard template layouts matching python-pptx defaults for 16:9 format
         const STANDARD_TEMPLATES = {
-            title: {
-                elements: [
-                    {
-                        type: 'title',
-                        left: 1.0,
-                        top: 2.0,
-                        width: 11.333,
-                        height: 1.8,
-                        content: 'Click to add title',
-                        font_size: 44,
-                        font_name: 'Calibri',
-                        list_type: 'none'
-                    },
-                    {
-                        type: 'textbox',
-                        left: 1.0,
-                        top: 4.2,
-                        width: 11.333,
-                        height: 1.3,
-                        content: 'Click to add subtitle',
-                        font_size: 20,
-                        font_name: 'Calibri',
-                        list_type: 'none'
-                    }
-                ]
+            standard: {
+                title: {
+                    elements: [
+                        {
+                            type: 'title',
+                            left: 1.0,
+                            top: 2.0,
+                            width: 11.333,
+                            height: 1.8,
+                            content: 'Click to add title',
+                            font_size: 44,
+                            font_name: 'Calibri',
+                            list_type: 'none'
+                        },
+                        {
+                            type: 'textbox',
+                            left: 1.0,
+                            top: 4.2,
+                            width: 11.333,
+                            height: 1.3,
+                            content: 'Click to add subtitle',
+                            font_size: 20,
+                            font_name: 'Calibri',
+                            list_type: 'none'
+                        }
+                    ]
+                },
+                content: {
+                    elements: [
+                        {
+                            type: 'title',
+                            left: 0.5,
+                            top: 0.5,
+                            width: 12.333,
+                            height: 1.2,
+                            content: 'Click to add title',
+                            font_size: 28,
+                            font_name: 'Calibri',
+                            list_type: 'none'
+                        },
+                        {
+                            type: 'textbox',
+                            left: 0.5,
+                            top: 1.9,
+                            width: 12.333,
+                            height: 4.8,
+                            content: 'Click to add text',
+                            font_size: 18,
+                            font_name: 'Calibri',
+                            list_type: 'bullet'
+                        }
+                    ]
+                }
             },
-            content: {
-                elements: [
-                    {
-                        type: 'title',
-                        left: 0.5,
-                        top: 0.5,
-                        width: 12.333,
-                        height: 1.2,
-                        content: 'Click to add title',
-                        font_size: 28,
-                        font_name: 'Calibri',
-                        list_type: 'none'
-                    },
-                    {
-                        type: 'textbox',
-                        left: 0.5,
-                        top: 1.9,
-                        width: 12.333,
-                        height: 4.8,
-                        content: 'Click to add text',
-                        font_size: 18,
-                        font_name: 'Calibri',
-                        list_type: 'bullet'
-                    }
-                ]
+            'with-image': {
+                title: {
+                    elements: [
+                        {
+                            type: 'title',
+                            left: 1.0,
+                            top: 2.0,
+                            width: 11.333,
+                            height: 1.8,
+                            content: 'Click to add title',
+                            font_size: 44,
+                            font_name: 'Calibri',
+                            list_type: 'none'
+                        },
+                        {
+                            type: 'textbox',
+                            left: 1.0,
+                            top: 4.2,
+                            width: 11.333,
+                            height: 1.3,
+                            content: 'Click to add subtitle',
+                            font_size: 20,
+                            font_name: 'Calibri',
+                            list_type: 'none'
+                        }
+                    ]
+                },
+                content: {
+                    elements: [
+                        {
+                            type: 'title',
+                            left: 0,
+                            top: 0,
+                            width: 13.333,
+                            height: 1.2166666666666666,
+                            content: 'Click to add title',
+                            font_size: 40,
+                            font_name: 'Calibri',
+                            list_type: 'none'
+                        },
+                        {
+                            type: 'textbox',
+                            left: 0,
+                            top: 0.7666666666666667,
+                            width: 7.2998175,
+                            height: 6.733333333333333,
+                            content: 'Click to add text',
+                            font_size: 28,
+                            font_name: 'Calibri',
+                            list_type: 'bullet'
+                        },
+                        {
+                            type: 'image',
+                            left: 7.34981625,
+                            top: 0.8,
+                            width: 5.98318375,
+                            height: 6.7,
+                            content: 'IMAGE PLACEHOLDER',
+                            font_size: 18,
+                            font_name: 'Calibri',
+                            list_type: 'none'
+                        }
+                    ]
+                }
             }
         };
 
@@ -1025,23 +1104,40 @@
             // Add new slide type class
             canvas.classList.add(currentSlideType + '-slide');
             
-            // Load saved layout if available, otherwise load standard template
+            // Load saved layout if available, otherwise load current template
             if (savedLayouts[currentSlideType]) {
                 console.log(`Loading saved ${currentSlideType} layout`);
                 loadLayoutData(savedLayouts[currentSlideType]);
                 statusEl.textContent = `Custom ${currentSlideType} layout loaded`;
-            } else if (STANDARD_TEMPLATES[currentSlideType]) {
-                console.log(`Loading standard ${currentSlideType} template`);
+            } else if (STANDARD_TEMPLATES[currentTemplate] && STANDARD_TEMPLATES[currentTemplate][currentSlideType]) {
+                console.log(`Loading ${currentTemplate} ${currentSlideType} template`);
                 loadLayoutData({
                     slide_type: currentSlideType,
-                    elements: STANDARD_TEMPLATES[currentSlideType].elements
+                    elements: STANDARD_TEMPLATES[currentTemplate][currentSlideType].elements
                 });
                 // Save this as the default layout
                 savedLayouts[currentSlideType] = getLayoutData();
-                statusEl.textContent = `Standard ${currentSlideType} template loaded`;
+                const templateName = currentTemplate === 'standard' ? 'Standard' : 'My Content';
+                statusEl.textContent = `${templateName} ${currentSlideType} template loaded`;
             }
             
             console.log('Slide type changed to:', currentSlideType);
+        }
+
+        function changeTemplate() {
+            const templateSelector = document.getElementById('template-selector');
+            currentTemplate = templateSelector.value;
+            
+            // Clear saved layouts to force reload from new template
+            savedLayouts = {
+                title: null,
+                content: null
+            };
+            
+            // Reload current slide type with new template
+            updateSlideType();
+            
+            console.log('Template changed to:', currentTemplate);
         }
 
         function saveLayout() {
@@ -1400,14 +1496,14 @@
             if (!savedLayouts.title) {
                 savedLayouts.title = {
                     slide_type: 'title',
-                    elements: STANDARD_TEMPLATES.title.elements
+                    elements: STANDARD_TEMPLATES[currentTemplate].title.elements
                 };
             }
             
             if (!savedLayouts.content) {
                 savedLayouts.content = {
                     slide_type: 'content',
-                    elements: STANDARD_TEMPLATES.content.elements
+                    elements: STANDARD_TEMPLATES[currentTemplate].content.elements
                 };
             }
             

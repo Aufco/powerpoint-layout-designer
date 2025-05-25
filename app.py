@@ -9,6 +9,8 @@ from pptx.util import Inches, Pt
 from pptx.enum.text import PP_ALIGN, MSO_AUTO_SIZE
 from pptx.enum.text import MSO_ANCHOR
 from pptx.dml.color import RGBColor
+from pptx.enum.dml import MSO_THEME_COLOR
+from pptx.enum.shapes import MSO_SHAPE
 import re
 import math
 
@@ -164,7 +166,7 @@ def generate_textbox_code(element, index):
             f"            p = text_frame_{index}.paragraphs[0]",
             f"        else:",
             f"            p = text_frame_{index}.add_paragraph()",
-            f"        p.text = item.strip()",
+            f"        p.text = f'• {{item.strip()}}'",
             f"        p.level = 0  # First level bullet",
             f"        # Format the paragraph",
             f"        for run in p.runs:",
@@ -204,10 +206,34 @@ def generate_image_code(element, index):
     lines = [
         f"# Add image {index + 1}",
         f"# Note: Replace 'path_to_image.jpg' with your actual image path",
-        f"image_{index} = slide.shapes.add_picture(",
-        f"    'path_to_image.jpg',",
-        f"    Inches({left}), Inches({top}), Inches({width}), Inches({height})",
-        f")",
+        f"try:",
+        f"    # Try to add actual image",
+        f"    image_{index} = slide.shapes.add_picture(",
+        f"        'path_to_image.jpg',",
+        f"        Inches({left}), Inches({top}), Inches({width}), Inches({height})",
+        f"    )",
+        f"except:",
+        f"    # If image file not found, add placeholder rectangle",
+        f"    from pptx.enum.shapes import MSO_SHAPE",
+        f"    rectangle_{index} = slide.shapes.add_shape(",
+        f"        MSO_SHAPE.RECTANGLE,",
+        f"        Inches({left}), Inches({top}), Inches({width}), Inches({height})",
+        f"    )",
+        f"    # Style as image placeholder",
+        f"    fill = rectangle_{index}.fill",
+        f"    fill.solid()",
+        f"    fill.fore_color.rgb = RGBColor(240, 240, 240)",
+        f"    line = rectangle_{index}.line",
+        f"    line.color.rgb = RGBColor(169, 169, 169)",
+        f"    line.width = Pt(1)",
+        f"    # Add placeholder text",
+        f"    if rectangle_{index}.has_text_frame:",
+        f"        text_frame = rectangle_{index}.text_frame",
+        f"        text_frame.clear()",
+        f"        p = text_frame.paragraphs[0]",
+        f"        p.text = '[INSERT IMAGE HERE]'",
+        f"        p.alignment = PP_ALIGN.CENTER",
+        f"        text_frame.vertical_anchor = MSO_ANCHOR.MIDDLE",
         ""
     ]
     
@@ -367,7 +393,8 @@ def create_presentation():
                     
                     # Configure text frame properties
                     text_frame.word_wrap = True
-                    text_frame.auto_size = MSO_AUTO_SIZE.TEXT_TO_FIT_SHAPE
+                    # Don't use auto-sizing to preserve exact font sizes
+                    text_frame.auto_size = MSO_AUTO_SIZE.NONE
                     
                     # Determine what content to use
                     if element['type'] == 'title':
@@ -377,7 +404,11 @@ def create_presentation():
                         p.text = content_text
                         p.alignment = PP_ALIGN.CENTER
                         
-                        # Apply title formatting from the designer
+                        # Apply title formatting from the designer - force run creation
+                        if not p.runs:
+                            text_content = p.text
+                            p.text = text_content
+                            
                         for run in p.runs:
                             font = run.font
                             font.name = element.get('font_name', 'Calibri')
@@ -393,11 +424,15 @@ def create_presentation():
                             p.text = content_text if content_text else ""
                             p.alignment = PP_ALIGN.CENTER
                             
-                            if p.runs:
-                                for run in p.runs:
-                                    font = run.font
-                                    font.name = element.get('font_name', 'Calibri')
-                                    font.size = Pt(element.get('font_size', 18))
+                            # Force run creation and apply formatting
+                            if not p.runs:
+                                text_content = p.text
+                                p.text = text_content
+                                
+                            for run in p.runs:
+                                font = run.font
+                                font.name = element.get('font_name', 'Calibri')
+                                font.size = Pt(element.get('font_size', 18))
                         else:
                             # For content slides, parse and add bullet points if list_type is bullet
                             if element.get('list_type', 'none') == 'bullet':
@@ -412,16 +447,17 @@ def create_presentation():
                                         else:
                                             p = text_frame.add_paragraph()
                                         
-                                        p.text = bullet_text.strip()
+                                        # Add bullet character manually for blank layouts
+                                        p.text = f"• {bullet_text.strip()}"
                                         p.level = 0  # First level bullet
                                         
-                                        # Apply formatting from the designer
-                                        # Format the paragraph first, then apply to runs
-                                        font = p.font
-                                        font.name = element.get('font_name', 'Calibri')
-                                        font.size = Pt(element.get('font_size', 18))
+                                        # Apply formatting from the designer - force run creation
+                                        if not p.runs:
+                                            # Force run creation by setting text again
+                                            text_content = p.text
+                                            p.text = text_content
                                         
-                                        # Also apply to any existing runs
+                                        # Apply to all runs
                                         for run in p.runs:
                                             run_font = run.font
                                             run_font.name = element.get('font_name', 'Calibri')
@@ -431,35 +467,66 @@ def create_presentation():
                                     p = text_frame.paragraphs[0]
                                     p.text = content_text
                                     
-                                    if p.runs:
-                                        for run in p.runs:
-                                            font = run.font
-                                            font.name = element.get('font_name', 'Calibri')
-                                            font.size = Pt(element.get('font_size', 18))
+                                    # Force run creation and apply formatting
+                                    if not p.runs:
+                                        text_content = p.text
+                                        p.text = text_content
+                                    
+                                    for run in p.runs:
+                                        font = run.font
+                                        font.name = element.get('font_name', 'Calibri')
+                                        font.size = Pt(element.get('font_size', 18))
                             else:
                                 # Plain text without bullets
                                 p = text_frame.paragraphs[0]
                                 p.text = content_text
                                 
-                                if p.runs:
-                                    for run in p.runs:
-                                        font = run.font
-                                        font.name = element.get('font_name', 'Calibri')
-                                        font.size = Pt(element.get('font_size', 18))
+                                # Force run creation and apply formatting
+                                if not p.runs:
+                                    text_content = p.text
+                                    p.text = text_content
+                                
+                                for run in p.runs:
+                                    font = run.font
+                                    font.name = element.get('font_name', 'Calibri')
+                                    font.size = Pt(element.get('font_size', 18))
                                         
                 elif element['type'] == 'image':
-                    # Add image placeholder with exact positioning
-                    textbox = slide.shapes.add_textbox(
+                    # Add image placeholder rectangle with border
+                    # Add a rectangle shape as image placeholder
+                    rectangle = slide.shapes.add_shape(
+                        MSO_SHAPE.RECTANGLE,
                         Inches(element['left']), 
                         Inches(element['top']), 
                         Inches(element['width']), 
                         Inches(element['height'])
                     )
-                    text_frame = textbox.text_frame
-                    text_frame.clear()
-                    p = text_frame.paragraphs[0]
-                    p.text = "[IMAGE PLACEHOLDER]"
-                    p.alignment = PP_ALIGN.CENTER
+                    
+                    # Style the rectangle to look like an image placeholder
+                    fill = rectangle.fill
+                    fill.solid()
+                    fill.fore_color.rgb = RGBColor(240, 240, 240)  # Light gray background
+                    
+                    line = rectangle.line
+                    line.color.rgb = RGBColor(169, 169, 169)  # Gray border
+                    line.width = Pt(1)
+                    
+                    # Add text to indicate this is an image placeholder
+                    if rectangle.has_text_frame:
+                        text_frame = rectangle.text_frame
+                        text_frame.clear()
+                        p = text_frame.paragraphs[0]
+                        p.text = "[INSERT IMAGE HERE]"
+                        p.alignment = PP_ALIGN.CENTER
+                        text_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
+                        
+                        # Format the placeholder text
+                        if p.runs:
+                            for run in p.runs:
+                                font = run.font
+                                font.name = 'Calibri'
+                                font.size = Pt(14)
+                                font.color.rgb = RGBColor(128, 128, 128)  # Gray text
         
         # Save presentation to memory
         file_buffer = io.BytesIO()
