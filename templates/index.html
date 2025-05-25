@@ -73,6 +73,11 @@
             background: #7f8c8d;
         }
 
+        .btn:disabled {
+            background: #7f8c8d;
+            cursor: not-allowed;
+        }
+
         .form-group {
             margin: 10px 0;
         }
@@ -303,6 +308,7 @@
             padding: 15px;
             margin: 10px 0;
             transition: border-color 0.2s;
+            position: relative;
         }
 
         .slide-item:hover {
@@ -314,6 +320,18 @@
             align-items: center;
             gap: 10px;
             margin-bottom: 10px;
+        }
+
+        .slide-number {
+            position: absolute;
+            bottom: 10px;
+            left: 15px;
+            background: #6c757d;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: bold;
         }
 
         .slide-type-badge {
@@ -358,6 +376,7 @@
 
         .slide-actions {
             margin-top: 10px;
+            margin-bottom: 25px;
             display: flex;
             gap: 8px;
         }
@@ -383,6 +402,43 @@
         .slide-actions .btn-down {
             background: #95a5a6;
             color: white;
+        }
+
+        /* Loading indicator */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .loading-content {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
@@ -489,8 +545,11 @@
                     <option value="content">Content Slide</option>
                 </select>
                 <span style="color: #7f8c8d; font-size: 14px;">
-                    Click elements to select • Drag to move • Use handles to resize
+                    Design layouts for both slide types • Layouts are saved automatically when switching
                 </span>
+                <div style="margin-left: auto; font-size: 12px; color: #7f8c8d;">
+                    <span id="layout-status">Standard template loaded</span>
+                </div>
             </div>
             
             <div class="canvas-container">
@@ -498,6 +557,14 @@
                     <!-- Dynamic elements will be added here -->
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <p>Generating content...</p>
         </div>
     </div>
 
@@ -525,7 +592,7 @@
                     <div id="slides-list"></div>
                     <div style="margin: 15px 0;">
                         <button class="btn" onclick="addSlide()" style="background: #3498db;">Add Slide</button>
-                        <button class="btn" onclick="generateFullContent()" style="background: #27ae60;">Generate Content</button>
+                        <button class="btn" onclick="generateFullContent()" id="generate-content-btn" style="background: #27ae60;">Generate Content</button>
                         <button class="btn" onclick="createPresentation()" style="background: #e74c3c;">Create PowerPoint</button>
                     </div>
                 </div>
@@ -551,16 +618,80 @@
         let generatedFilename = '';
         let currentSlides = [];
         let currentTopic = '';
+        
+        // Store separate layouts for title and content slides
+        let savedLayouts = {
+            title: null,
+            content: null
+        };
 
-        // Constants for slide dimensions (800px = 10 inches, 450px = 5.625 inches)
+        // Constants for slide dimensions (16:9 aspect ratio)
         const PIXELS_PER_INCH = 80;
-        const SLIDE_WIDTH_INCHES = 10;
-        const SLIDE_HEIGHT_INCHES = 5.625;
+        const SLIDE_WIDTH_INCHES = 13.333;  // 16:9 widescreen format
+        const SLIDE_HEIGHT_INCHES = 7.5;     // 16:9 widescreen format
+        const CANVAS_WIDTH = 800;            // Canvas display width
+        const CANVAS_HEIGHT = 450;           // Canvas display height (16:9 ratio)
+
+        // Standard template layouts matching python-pptx defaults for 16:9 format
+        const STANDARD_TEMPLATES = {
+            title: {
+                elements: [
+                    {
+                        type: 'title',
+                        left: 1.0,
+                        top: 2.0,
+                        width: 11.333,
+                        height: 1.8,
+                        content: 'Click to add title',
+                        font_size: 44,
+                        font_name: 'Calibri',
+                        list_type: 'none'
+                    },
+                    {
+                        type: 'textbox',
+                        left: 1.0,
+                        top: 4.2,
+                        width: 11.333,
+                        height: 1.3,
+                        content: 'Click to add subtitle',
+                        font_size: 20,
+                        font_name: 'Calibri',
+                        list_type: 'none'
+                    }
+                ]
+            },
+            content: {
+                elements: [
+                    {
+                        type: 'title',
+                        left: 0.5,
+                        top: 0.5,
+                        width: 12.333,
+                        height: 1.2,
+                        content: 'Click to add title',
+                        font_size: 28,
+                        font_name: 'Calibri',
+                        list_type: 'none'
+                    },
+                    {
+                        type: 'textbox',
+                        left: 0.5,
+                        top: 1.9,
+                        width: 12.333,
+                        height: 4.8,
+                        content: 'Click to add text',
+                        font_size: 18,
+                        font_name: 'Calibri',
+                        list_type: 'bullet'
+                    }
+                ]
+            }
+        };
 
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
             setupEventListeners();
-            updateSlideType(); // Initialize slide type styling
+            updateSlideType(); // Initialize slide type styling and default template
         });
 
         function setupEventListeners() {
@@ -576,6 +707,7 @@
 
         function addElement(type) {
             const canvas = document.getElementById('slide-canvas');
+            const statusEl = document.getElementById('layout-status');
             const element = document.createElement('div');
             element.className = `slide-element ${type}`;
             element.id = `element-${++elementCounter}`;
@@ -609,6 +741,10 @@
             
             canvas.appendChild(element);
             selectElement(element);
+            
+            // Update status
+            const currentSlideType = document.getElementById('slide-type').value;
+            statusEl.textContent = `Custom ${currentSlideType} layout (modified)`;
         }
 
         function setupElementEvents(element) {
@@ -793,8 +929,9 @@
         function updatePropertiesPosition() {
             if (!selectedElement) return;
             
-            const x = parseInt(selectedElement.style.left) / PIXELS_PER_INCH;
-            const y = parseInt(selectedElement.style.top) / PIXELS_PER_INCH;
+            // Convert pixels to inches using 16:9 ratio: 800px = 13.333", 450px = 7.5"
+            const x = (parseInt(selectedElement.style.left) / CANVAS_WIDTH) * SLIDE_WIDTH_INCHES;
+            const y = (parseInt(selectedElement.style.top) / CANVAS_HEIGHT) * SLIDE_HEIGHT_INCHES;
             
             document.getElementById('element-x').value = x.toFixed(2);
             document.getElementById('element-y').value = y.toFixed(2);
@@ -803,8 +940,9 @@
         function updatePropertiesSize() {
             if (!selectedElement) return;
             
-            const width = selectedElement.offsetWidth / PIXELS_PER_INCH;
-            const height = selectedElement.offsetHeight / PIXELS_PER_INCH;
+            // Convert pixels to inches using 16:9 ratio
+            const width = (selectedElement.offsetWidth / CANVAS_WIDTH) * SLIDE_WIDTH_INCHES;
+            const height = (selectedElement.offsetHeight / CANVAS_HEIGHT) * SLIDE_HEIGHT_INCHES;
             
             document.getElementById('element-width').value = width.toFixed(2);
             document.getElementById('element-height').value = height.toFixed(2);
@@ -833,8 +971,9 @@
         function updateSelectedElementPosition() {
             if (!selectedElement) return;
             
-            const x = parseFloat(document.getElementById('element-x').value) * PIXELS_PER_INCH;
-            const y = parseFloat(document.getElementById('element-y').value) * PIXELS_PER_INCH;
+            // Convert inches to pixels using 16:9 ratio
+            const x = (parseFloat(document.getElementById('element-x').value) / SLIDE_WIDTH_INCHES) * CANVAS_WIDTH;
+            const y = (parseFloat(document.getElementById('element-y').value) / SLIDE_HEIGHT_INCHES) * CANVAS_HEIGHT;
             
             selectedElement.style.left = x + 'px';
             selectedElement.style.top = y + 'px';
@@ -843,8 +982,9 @@
         function updateSelectedElementSize() {
             if (!selectedElement) return;
             
-            const width = parseFloat(document.getElementById('element-width').value) * PIXELS_PER_INCH;
-            const height = parseFloat(document.getElementById('element-height').value) * PIXELS_PER_INCH;
+            // Convert inches to pixels using 16:9 ratio
+            const width = (parseFloat(document.getElementById('element-width').value) / SLIDE_WIDTH_INCHES) * CANVAS_WIDTH;
+            const height = (parseFloat(document.getElementById('element-height').value) / SLIDE_HEIGHT_INCHES) * CANVAS_HEIGHT;
             
             selectedElement.style.width = width + 'px';
             selectedElement.style.height = height + 'px';
@@ -865,19 +1005,43 @@
         }
 
         function updateSlideType() {
-            const slideType = document.getElementById('slide-type').value;
+            const currentSlideType = document.getElementById('slide-type').value;
             const canvas = document.getElementById('slide-canvas');
+            const statusEl = document.getElementById('layout-status');
             
-            // Clear existing elements when switching slide types
+            // Save the current layout before switching
+            const previousSlideType = canvas.classList.contains('title-slide') ? 'title' : 'content';
+            if (canvas.children.length > 0) {
+                savedLayouts[previousSlideType] = getLayoutData();
+                console.log(`Saved ${previousSlideType} layout:`, savedLayouts[previousSlideType]);
+            }
+            
+            // Clear existing elements
             clearSlide();
             
             // Remove existing slide type classes
             canvas.classList.remove('title-slide', 'content-slide');
             
             // Add new slide type class
-            canvas.classList.add(slideType + '-slide');
+            canvas.classList.add(currentSlideType + '-slide');
             
-            console.log('Slide type changed to:', slideType);
+            // Load saved layout if available, otherwise load standard template
+            if (savedLayouts[currentSlideType]) {
+                console.log(`Loading saved ${currentSlideType} layout`);
+                loadLayoutData(savedLayouts[currentSlideType]);
+                statusEl.textContent = `Custom ${currentSlideType} layout loaded`;
+            } else if (STANDARD_TEMPLATES[currentSlideType]) {
+                console.log(`Loading standard ${currentSlideType} template`);
+                loadLayoutData({
+                    slide_type: currentSlideType,
+                    elements: STANDARD_TEMPLATES[currentSlideType].elements
+                });
+                // Save this as the default layout
+                savedLayouts[currentSlideType] = getLayoutData();
+                statusEl.textContent = `Standard ${currentSlideType} template loaded`;
+            }
+            
+            console.log('Slide type changed to:', currentSlideType);
         }
 
         function saveLayout() {
@@ -906,10 +1070,10 @@
             const canvas = document.getElementById('slide-canvas');
             const elements = Array.from(canvas.children).map(el => ({
                 type: el.dataset.type,
-                left: parseInt(el.style.left) / PIXELS_PER_INCH,
-                top: parseInt(el.style.top) / PIXELS_PER_INCH,
-                width: el.offsetWidth / PIXELS_PER_INCH,
-                height: el.offsetHeight / PIXELS_PER_INCH,
+                left: (parseInt(el.style.left) / CANVAS_WIDTH) * SLIDE_WIDTH_INCHES,
+                top: (parseInt(el.style.top) / CANVAS_HEIGHT) * SLIDE_HEIGHT_INCHES,
+                width: (el.offsetWidth / CANVAS_WIDTH) * SLIDE_WIDTH_INCHES,
+                height: (el.offsetHeight / CANVAS_HEIGHT) * SLIDE_HEIGHT_INCHES,
                 content: el.dataset.content || '',
                 font_size: parseInt(el.dataset.fontSize) || 18,
                 font_name: el.dataset.fontName || 'Arial',
@@ -925,17 +1089,22 @@
         function loadLayoutData(data) {
             clearSlide();
             document.getElementById('slide-type').value = data.slide_type;
-            updateSlideType(); // Apply the slide type styling
+            
+            // Apply slide type styling without triggering clearSlide again
+            const canvas = document.getElementById('slide-canvas');
+            canvas.classList.remove('title-slide', 'content-slide');
+            canvas.classList.add(data.slide_type + '-slide');
             
             data.elements.forEach(elementData => {
                 const element = document.createElement('div');
                 element.className = `slide-element ${elementData.type}`;
                 element.id = `element-${++elementCounter}`;
                 
-                element.style.left = (elementData.left * PIXELS_PER_INCH) + 'px';
-                element.style.top = (elementData.top * PIXELS_PER_INCH) + 'px';
-                element.style.width = (elementData.width * PIXELS_PER_INCH) + 'px';
-                element.style.height = (elementData.height * PIXELS_PER_INCH) + 'px';
+                // Convert inches to pixels using 16:9 ratio
+                element.style.left = ((elementData.left / SLIDE_WIDTH_INCHES) * CANVAS_WIDTH) + 'px';
+                element.style.top = ((elementData.top / SLIDE_HEIGHT_INCHES) * CANVAS_HEIGHT) + 'px';
+                element.style.width = ((elementData.width / SLIDE_WIDTH_INCHES) * CANVAS_WIDTH) + 'px';
+                element.style.height = ((elementData.height / SLIDE_HEIGHT_INCHES) * CANVAS_HEIGHT) + 'px';
                 
                 element.dataset.type = elementData.type;
                 element.dataset.content = elementData.content;
@@ -1017,6 +1186,18 @@
             document.getElementById('code-modal').classList.remove('active');
         }
 
+        function showLoading(message = 'Loading...') {
+            const overlay = document.getElementById('loading-overlay');
+            const content = overlay.querySelector('.loading-content p');
+            content.textContent = message;
+            overlay.style.display = 'flex';
+        }
+
+        function hideLoading() {
+            const overlay = document.getElementById('loading-overlay');
+            overlay.style.display = 'none';
+        }
+
         // Content Generation Functions
         async function generateDraft() {
             const topic = document.getElementById('presentation-topic').value.trim();
@@ -1079,15 +1260,28 @@
             currentSlides.forEach((slide, index) => {
                 const slideDiv = document.createElement('div');
                 slideDiv.className = 'slide-item';
+                
+                // For title slides, show subtitle/description in content area, for content slides show the content
+                let displayContent, contentPlaceholder;
+                if (slide.type === 'title') {
+                    displayContent = slide.content || '';
+                    contentPlaceholder = 'Optional subtitle or description...';
+                } else {
+                    displayContent = slide.content;
+                    contentPlaceholder = 'Content will be generated...';
+                }
+                
                 slideDiv.innerHTML = `
+                    <div class="slide-number">${index + 1}</div>
                     <div class="slide-header">
                         <span class="slide-type-badge ${slide.type}">${slide.type}</span>
                         <input type="text" class="slide-title" value="${slide.title}" 
-                               onchange="updateSlideTitle(${index}, this.value)">
+                               onchange="updateSlideTitle(${index}, this.value)"
+                               placeholder="${slide.type === 'title' ? 'Main presentation title' : 'Slide title'}">
                     </div>
                     <div class="slide-content">
-                        <textarea placeholder="Slide content..." 
-                                  onchange="updateSlideContent(${index}, this.value)">${slide.content}</textarea>
+                        <textarea placeholder="${contentPlaceholder}" 
+                                  onchange="updateSlideContent(${index}, this.value)">${displayContent}</textarea>
                     </div>
                     <div class="slide-actions">
                         <button class="btn-up" onclick="moveSlide(${index}, -1)">↑ Up</button>
@@ -1149,6 +1343,14 @@
             // Get current content layout for character limit calculation
             const contentLayout = getLayoutForType('content');
 
+            // Show loading indicator
+            showLoading('Generating content...');
+            
+            // Disable the button
+            const button = document.getElementById('generate-content-btn');
+            button.disabled = true;
+            button.textContent = 'Generating...';
+
             try {
                 const response = await fetch('/generate_content', {
                     method: 'POST',
@@ -1167,12 +1369,20 @@
                 if (response.ok) {
                     currentSlides = result.slides;
                     renderSlidesList();
-                    alert('Content generated successfully!');
+                    // Success message will be shown briefly
+                    setTimeout(() => {
+                        alert('Content generated successfully!');
+                    }, 500);
                 } else {
                     alert('Error: ' + result.error);
                 }
             } catch (error) {
                 alert('Error generating content: ' + error.message);
+            } finally {
+                // Hide loading and re-enable button
+                hideLoading();
+                button.disabled = false;
+                button.textContent = 'Generate Content';
             }
         }
 
@@ -1182,9 +1392,27 @@
                 return;
             }
 
-            // Get current layouts
-            const titleLayout = getLayoutForType('title');
-            const contentLayout = getLayoutForType('content');
+            // Save the current layout before creating presentation
+            const currentSlideType = document.getElementById('slide-type').value;
+            savedLayouts[currentSlideType] = getLayoutData();
+            
+            // Ensure we have layouts for both slide types
+            if (!savedLayouts.title) {
+                savedLayouts.title = {
+                    slide_type: 'title',
+                    elements: STANDARD_TEMPLATES.title.elements
+                };
+            }
+            
+            if (!savedLayouts.content) {
+                savedLayouts.content = {
+                    slide_type: 'content',
+                    elements: STANDARD_TEMPLATES.content.elements
+                };
+            }
+            
+            console.log('Using title layout:', savedLayouts.title);
+            console.log('Using content layout:', savedLayouts.content);
 
             try {
                 const response = await fetch('/create_presentation', {
@@ -1194,8 +1422,8 @@
                     },
                     body: JSON.stringify({
                         slides: currentSlides,
-                        title_layout: titleLayout,
-                        content_layout: contentLayout
+                        title_layout: savedLayouts.title,
+                        content_layout: savedLayouts.content
                     })
                 });
 

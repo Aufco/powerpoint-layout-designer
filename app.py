@@ -19,13 +19,19 @@ openai_client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
 
 def parse_bullet_points(content):
-    """Parse content and extract bullet points, removing any bullet symbols"""
+    """Parse content and extract bullet points - each line becomes a bullet point"""
+    if not content:
+        return []
+    
     lines = content.strip().split('\n')
     bullet_points = []
     
     for line in lines:
         line = line.strip()
-        # Remove any bullet symbols that might be present
+        if not line:
+            continue
+            
+        # Remove any bullet symbols that might be present (including hyphens)
         if line.startswith(('- ', '• ', '* ', '· ', '○ ', '▪ ', '‣ ')):
             bullet_text = line[2:].strip()
             if bullet_text:
@@ -36,7 +42,7 @@ def parse_bullet_points(content):
             if bullet_text:
                 bullet_points.append(bullet_text)
         elif line and not any(line.lower().startswith(word) for word in ['slide', 'title:', 'content:']):
-            # Include non-empty lines that aren't headers
+            # Include non-empty lines that aren't headers - each line becomes a bullet
             bullet_points.append(line)
     
     return bullet_points
@@ -147,17 +153,18 @@ def generate_textbox_code(element, index):
     ]
     
     # Check if content has bullet points
-    if list_type == 'bullet' and '\\n' in content:
+    if list_type == 'bullet' and ('\\n' in content or '\n' in content):
+        bullet_points = parse_bullet_points(content)
         lines.extend([
             f"# Add bullet points",
-            f"bullet_items = {repr(content.split('\\n'))}",
+            f"bullet_items = {repr(bullet_points)}",
             f"for i, item in enumerate(bullet_items):",
             f"    if item.strip():",
             f"        if i == 0:",
             f"            p = text_frame_{index}.paragraphs[0]",
             f"        else:",
             f"            p = text_frame_{index}.add_paragraph()",
-            f"        p.text = item.strip().lstrip('- •*·○▪‣')",
+            f"        p.text = item.strip()",
             f"        p.level = 0  # First level bullet",
             f"        # Format the paragraph",
             f"        for run in p.runs:",
@@ -220,8 +227,8 @@ def generate_draft():
         response = openai_client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "You are a presentation expert. Create a clear, logical outline for a PowerPoint presentation. Return only slide titles, one per line, without numbering or bullet points. Include a title slide and 4-8 content slides."},
-                {"role": "user", "content": f"Create a presentation outline about: {topic}"}
+                {"role": "system", "content": "You are a presentation expert. Create a clear, logical outline for a PowerPoint presentation. The first line should be the main presentation title (what goes on the title slide). The following lines should be content slide titles. Return only slide titles, one per line, without numbering, bullet points, or prefixes like 'Title:' or 'Slide 1:'. Provide 5-9 total lines."},
+                {"role": "user", "content": f"Create a presentation outline about: {topic}\n\nExample format:\nThe Complete Guide to Solar Energy\nIntroduction to Solar Technology\nTypes of Solar Panels\nInstallation Process\nCost and Benefits\nMaintenance and Care"}
             ],
             max_tokens=300,
             temperature=0.7
@@ -232,18 +239,33 @@ def generate_draft():
         
         # Format slides with types and clean up titles
         formatted_slides = []
-        for i, title in enumerate(slides):
-            # Remove common prefixes like "Slide 1:", "Slide 2:", etc.
-            cleaned_title = re.sub(r'^Slide\s*\d+\s*:\s*', '', title, flags=re.IGNORECASE)
-            cleaned_title = re.sub(r'^\d+\.\s*', '', cleaned_title)  # Remove numbering like "1. "
+        
+        # First slide is always the title slide using the first line from OpenAI
+        if slides:
+            title_slide_title = slides[0]
+            # Remove common prefixes
+            title_slide_title = re.sub(r'^Slide\s*\d+\s*:\s*', '', title_slide_title, flags=re.IGNORECASE)
+            title_slide_title = re.sub(r'^\d+\.\s*', '', title_slide_title)
             
-            slide_type = 'title' if i == 0 else 'content'
             formatted_slides.append({
-                'id': i,
-                'title': cleaned_title,
-                'type': slide_type,
-                'content': '' if slide_type == 'title' else 'Content will be generated after approval'
+                'id': 0,
+                'title': title_slide_title,
+                'type': 'title',
+                'content': ''  # Title slides typically have no content or just subtitle
             })
+            
+            # Remaining slides are content slides
+            for i, title in enumerate(slides[1:], 1):
+                # Remove common prefixes
+                cleaned_title = re.sub(r'^Slide\s*\d+\s*:\s*', '', title, flags=re.IGNORECASE)
+                cleaned_title = re.sub(r'^\d+\.\s*', '', cleaned_title)
+                
+                formatted_slides.append({
+                    'id': i,
+                    'title': cleaned_title,
+                    'type': 'content',
+                    'content': 'Content will be generated after approval'
+                })
         
         return jsonify({
             'slides': formatted_slides,
@@ -272,8 +294,8 @@ def generate_content():
                 response = openai_client.chat.completions.create(
                     model="gpt-3.5-turbo",
                     messages=[
-                        {"role": "system", "content": "You are a presentation content writer. Create bullet points for PowerPoint slides. Provide each point as a separate line without any bullet symbols or dashes. Be concise and impactful."},
-                        {"role": "user", "content": f"Create content for this slide about '{topic}':\nSlide title: {slide['title']}\n\nProvide 3-5 bullet points. Each bullet should be concise and fit on 1-2 lines."}
+                        {"role": "system", "content": "You are a presentation content writer. Create bullet points for PowerPoint slides. Provide each point as a separate line with NO bullet symbols, NO dashes, NO prefixes - just plain text. Each line will automatically become a bullet point in the presentation. Be concise and impactful."},
+                        {"role": "user", "content": f"Create content for this slide about '{topic}':\nSlide title: {slide['title']}\n\nProvide 3-5 bullet points. Each point should be on its own line with no bullet symbols. Example format:\nPoint one text here\nPoint two text here\nPoint three text here"}
                     ],
                     max_tokens=200,
                     temperature=0.7
@@ -298,13 +320,28 @@ def create_presentation():
     if not slides_data:
         return jsonify({'error': 'Slides data is required'}), 400
     
+    # Debug: print the received layouts
+    print("Title layout received:", title_layout)
+    print("Content layout received:", content_layout)
+    
     try:
-        # Create presentation
+        # Create presentation with 16:9 aspect ratio
         pres = Presentation()
+        
+        # Set slide size to 16:9 widescreen format
+        pres.slide_width = Inches(13.333)  # 16:9 ratio width
+        pres.slide_height = Inches(7.5)    # 16:9 ratio height
         
         for slide_data in slides_data:
             slide_type = slide_data['type']
-            layout_config = title_layout if slide_type == 'title' else content_layout
+            
+            # Use the appropriate layout based on slide type
+            if slide_type == 'title':
+                layout_config = title_layout
+            else:
+                layout_config = content_layout
+            
+            print(f"Using layout for {slide_type} slide:", layout_config)
             
             # Add blank slide
             slide_layout = pres.slide_layouts[6]  # Blank layout
@@ -312,10 +349,13 @@ def create_presentation():
             
             # Add elements based on layout configuration
             elements = layout_config.get('elements', [])
+            print(f"Processing {len(elements)} elements for slide: {slide_data['title']}")
             
             for element in elements:
+                print(f"Processing element: {element}")
+                
                 if element['type'] in ['textbox', 'title']:
-                    # Add text box
+                    # Add text box with EXACT positioning from the designer
                     textbox = slide.shapes.add_textbox(
                         Inches(element['left']), 
                         Inches(element['top']), 
@@ -329,62 +369,97 @@ def create_presentation():
                     text_frame.word_wrap = True
                     text_frame.auto_size = MSO_AUTO_SIZE.TEXT_TO_FIT_SHAPE
                     
-                    # Set content based on element type and slide data
+                    # Determine what content to use
                     if element['type'] == 'title':
-                        # For title elements, use the slide title
+                        # For title elements, always use the slide title
+                        content_text = slide_data['title']
                         p = text_frame.paragraphs[0]
-                        p.text = slide_data['title']
+                        p.text = content_text
                         p.alignment = PP_ALIGN.CENTER
                         
-                        # Apply title formatting
+                        # Apply title formatting from the designer
                         for run in p.runs:
                             font = run.font
-                            font.name = element.get('font_name', 'Arial')
+                            font.name = element.get('font_name', 'Calibri')
                             font.size = Pt(element.get('font_size', 28))
                             font.bold = True
                     else:
-                        # For content elements
-                        content = slide_data.get('content', '')
+                        # For textbox elements, use slide content
+                        content_text = slide_data.get('content', '')
                         
                         if slide_type == 'title':
-                            # For title slides, add subtitle or description
+                            # For title slides, textbox shows subtitle/description
                             p = text_frame.paragraphs[0]
-                            p.text = content if content else f"Presentation on {slide_data['title']}"
+                            p.text = content_text if content_text else ""
                             p.alignment = PP_ALIGN.CENTER
                             
-                            for run in p.runs:
-                                font = run.font
-                                font.name = element.get('font_name', 'Arial')
-                                font.size = Pt(element.get('font_size', 18))
+                            if p.runs:
+                                for run in p.runs:
+                                    font = run.font
+                                    font.name = element.get('font_name', 'Calibri')
+                                    font.size = Pt(element.get('font_size', 18))
                         else:
-                            # For content slides, parse and add bullet points
-                            bullet_points = parse_bullet_points(content)
-                            
-                            if bullet_points and element.get('list_type', 'bullet') == 'bullet':
-                                # Add bullet points
-                                for i, bullet_text in enumerate(bullet_points):
-                                    if i == 0:
-                                        p = text_frame.paragraphs[0]
-                                    else:
-                                        p = text_frame.add_paragraph()
-                                    
-                                    p.text = bullet_text
-                                    p.level = 0  # First level bullet
-                                    
-                                    # Apply formatting
-                                    for run in p.runs:
-                                        font = run.font
-                                        font.name = element.get('font_name', 'Arial')
+                            # For content slides, parse and add bullet points if list_type is bullet
+                            if element.get('list_type', 'none') == 'bullet':
+                                bullet_points = parse_bullet_points(content_text)
+                                print(f"Parsed bullet points: {bullet_points}")
+                                
+                                if bullet_points:
+                                    # Add bullet points - each line becomes a bullet
+                                    for i, bullet_text in enumerate(bullet_points):
+                                        if i == 0:
+                                            p = text_frame.paragraphs[0]
+                                        else:
+                                            p = text_frame.add_paragraph()
+                                        
+                                        p.text = bullet_text.strip()
+                                        p.level = 0  # First level bullet
+                                        
+                                        # Apply formatting from the designer
+                                        # Format the paragraph first, then apply to runs
+                                        font = p.font
+                                        font.name = element.get('font_name', 'Calibri')
                                         font.size = Pt(element.get('font_size', 18))
+                                        
+                                        # Also apply to any existing runs
+                                        for run in p.runs:
+                                            run_font = run.font
+                                            run_font.name = element.get('font_name', 'Calibri')
+                                            run_font.size = Pt(element.get('font_size', 18))
+                                else:
+                                    # No bullet points, just add the text
+                                    p = text_frame.paragraphs[0]
+                                    p.text = content_text
+                                    
+                                    if p.runs:
+                                        for run in p.runs:
+                                            font = run.font
+                                            font.name = element.get('font_name', 'Calibri')
+                                            font.size = Pt(element.get('font_size', 18))
                             else:
                                 # Plain text without bullets
                                 p = text_frame.paragraphs[0]
-                                p.text = content
+                                p.text = content_text
                                 
-                                for run in p.runs:
-                                    font = run.font
-                                    font.name = element.get('font_name', 'Arial')
-                                    font.size = Pt(element.get('font_size', 18))
+                                if p.runs:
+                                    for run in p.runs:
+                                        font = run.font
+                                        font.name = element.get('font_name', 'Calibri')
+                                        font.size = Pt(element.get('font_size', 18))
+                                        
+                elif element['type'] == 'image':
+                    # Add image placeholder with exact positioning
+                    textbox = slide.shapes.add_textbox(
+                        Inches(element['left']), 
+                        Inches(element['top']), 
+                        Inches(element['width']), 
+                        Inches(element['height'])
+                    )
+                    text_frame = textbox.text_frame
+                    text_frame.clear()
+                    p = text_frame.paragraphs[0]
+                    p.text = "[IMAGE PLACEHOLDER]"
+                    p.alignment = PP_ALIGN.CENTER
         
         # Save presentation to memory
         file_buffer = io.BytesIO()
@@ -401,6 +476,7 @@ def create_presentation():
         )
         
     except Exception as e:
+        print("Error creating presentation:", str(e))
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
