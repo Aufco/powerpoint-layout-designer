@@ -604,6 +604,7 @@
                     <div style="margin: 15px 0;">
                         <button class="btn" onclick="addSlide()" style="background: #3498db;">Add Slide</button>
                         <button class="btn" onclick="generateFullContent()" id="generate-content-btn" style="background: #27ae60;">Generate Content</button>
+                        <button class="btn" onclick="generateAllImages()" id="generate-all-images-btn" style="background: #9b59b6;">🎨 Generate All Images</button>
                         <button class="btn" onclick="createPresentation()" style="background: #e74c3c;">Create PowerPoint</button>
                     </div>
                 </div>
@@ -1378,10 +1379,17 @@
                     <div class="slide-content">
                         <textarea placeholder="${contentPlaceholder}" 
                                   onchange="updateSlideContent(${index}, this.value)">${displayContent}</textarea>
+                        ${slide.generated_image ? `
+                            <div class="generated-image" style="margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 4px; border: 1px solid #dee2e6;">
+                                <img src="${slide.generated_image}" alt="${slide.image_caption || 'Generated image'}" style="max-width: 200px; max-height: 150px; border-radius: 4px;">
+                                <p style="margin: 5px 0 0 0; font-size: 12px; color: #6c757d;">${slide.image_caption || 'Generated image'}</p>
+                            </div>
+                        ` : ''}
                     </div>
                     <div class="slide-actions">
                         <button class="btn-up" onclick="moveSlide(${index}, -1)">↑ Up</button>
                         <button class="btn-down" onclick="moveSlide(${index}, 1)">↓ Down</button>
+                        <button class="btn-generate-image" onclick="generateSlideImage(${index})" style="background: #9b59b6; color: white;">🎨 Generate Image</button>
                         <button class="btn-delete" onclick="deleteSlide(${index})">Delete</button>
                     </div>
                 `;
@@ -1543,6 +1551,125 @@
                 }
             } catch (error) {
                 alert('Error creating presentation: ' + error.message);
+            }
+        }
+
+        async function generateSlideImage(slideIndex) {
+            const slide = currentSlides[slideIndex];
+            if (!slide) {
+                alert('Slide not found.');
+                return;
+            }
+
+            // Show loading indicator
+            showLoading('Generating educational diagram...');
+            
+            // Disable the button
+            const button = document.querySelector(`button[onclick="generateSlideImage(${slideIndex})"]`);
+            if (button) {
+                button.disabled = true;
+                button.textContent = '🎨 Generating...';
+            }
+
+            try {
+                const response = await fetch('/generate_image', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        title: slide.title,
+                        content: slide.content
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    // Store the generated image data in the slide
+                    currentSlides[slideIndex].generated_image = result.image_url;
+                    currentSlides[slideIndex].image_caption = result.caption;
+                    
+                    // Refresh the slides list to show the image
+                    renderSlidesList();
+                    
+                    alert('Educational diagram generated successfully!');
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('Error generating image: ' + error.message);
+            } finally {
+                // Hide loading and re-enable button
+                hideLoading();
+                if (button) {
+                    button.disabled = false;
+                    button.textContent = '🎨 Generate Image';
+                }
+            }
+        }
+
+        async function generateAllImages() {
+            if (currentSlides.length === 0) {
+                alert('No slides available for image generation.');
+                return;
+            }
+
+            // Count slides that need images
+            const slidesNeedingImages = currentSlides.filter(slide => !slide.generated_image);
+            if (slidesNeedingImages.length === 0) {
+                alert('All slides already have images generated.');
+                return;
+            }
+
+            // Show loading indicator
+            showLoading(`Generating ${slidesNeedingImages.length} educational diagrams concurrently...`);
+            
+            // Disable the button
+            const button = document.getElementById('generate-all-images-btn');
+            if (button) {
+                button.disabled = true;
+                button.textContent = '🎨 Generating All...';
+            }
+
+            try {
+                const response = await fetch('/generate_images_bulk', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        slides: currentSlides
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    // Update the slides with the results
+                    currentSlides = result.slides;
+                    
+                    // Refresh the slides list to show all images
+                    renderSlidesList();
+                    
+                    const message = `Generated ${result.generated_count} diagrams successfully!`;
+                    if (result.error_count > 0) {
+                        alert(message + ` ${result.error_count} failed to generate.`);
+                    } else {
+                        alert(message);
+                    }
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('Error generating images: ' + error.message);
+            } finally {
+                // Hide loading and re-enable button
+                hideLoading();
+                if (button) {
+                    button.disabled = false;
+                    button.textContent = '🎨 Generate All Images';
+                }
             }
         }
 

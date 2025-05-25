@@ -13,6 +13,9 @@ from pptx.enum.dml import MSO_THEME_COLOR
 from pptx.enum.shapes import MSO_SHAPE
 import re
 import math
+import asyncio
+import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor
 
 app = Flask(__name__)
 
@@ -331,6 +334,120 @@ def generate_content():
                 slide['content_generated'] = True
         
         return jsonify({'slides': slides})
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+def generate_single_image(slide_title, slide_content):
+    """Generate a single image using gpt-image-1"""
+    try:
+        # Create simple hand-drawn style prompt with strict no-text requirements
+        base_style = "Simple hand-drawn sketch, black ink on white paper, clean minimal lines, NO TEXT, NO LABELS, NO WORDS, NO ARROWS, NO NUMBERS anywhere in the image."
+        
+        if slide_content:
+            image_prompt = f"{base_style} Hand-sketched illustration representing '{slide_title}' concept: {slide_content}. Minimalist line drawing style, looks like human drawn on paper with pen. Simple shapes and symbols only."
+        else:
+            image_prompt = f"{base_style} Hand-sketched illustration representing '{slide_title}'. Minimalist line drawing style, looks like human drawn on paper with pen. Simple shapes and symbols only."
+        
+        # Generate image using dall-e-3 (fallback while testing gpt-image-1)
+        response = openai_client.images.generate(
+            model="dall-e-3",
+            prompt=image_prompt,
+            size="1024x1024",
+            quality="standard",
+            n=1
+        )
+        
+        image_url = response.data[0].url
+        
+        # Generate a simple caption
+        caption_response = openai_client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are a presentation assistant. Create a brief, professional caption for an educational diagram. Keep it under 10 words."},
+                {"role": "user", "content": f"Create a caption for an educational diagram on slide '{slide_title}' with content: {slide_content if slide_content else 'No additional content'}"}
+            ],
+            max_tokens=50,
+            temperature=0.7
+        )
+        
+        caption = caption_response.choices[0].message.content.strip()
+        
+        return {
+            'image_url': image_url,
+            'caption': caption,
+            'prompt_used': image_prompt,
+            'success': True
+        }
+        
+    except Exception as e:
+        print(f"Image generation error: {str(e)}")
+        return {
+            'error': str(e),
+            'success': False
+        }
+
+@app.route('/generate_image', methods=['POST'])
+def generate_image():
+    """Generate an image for a slide using OpenAI gpt-image-1"""
+    data = request.json
+    slide_title = data.get('title', '')
+    slide_content = data.get('content', '')
+    
+    if not slide_title:
+        return jsonify({'error': 'Slide title is required'}), 400
+    
+    result = generate_single_image(slide_title, slide_content)
+    
+    if result['success']:
+        return jsonify({
+            'image_url': result['image_url'],
+            'caption': result['caption'],
+            'prompt_used': result['prompt_used']
+        })
+    else:
+        return jsonify({'error': result['error']}), 500
+
+@app.route('/generate_images_bulk', methods=['POST'])
+def generate_images_bulk():
+    """Generate images for multiple slides concurrently using gpt-image-1"""
+    data = request.json
+    slides = data.get('slides', [])
+    
+    if not slides:
+        return jsonify({'error': 'Slides are required'}), 400
+    
+    try:
+        # Use ThreadPoolExecutor for concurrent image generation
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            # Submit all image generation tasks
+            future_to_index = {}
+            for i, slide in enumerate(slides):
+                if not slide.get('generated_image'):  # Only generate if no image exists
+                    future = executor.submit(generate_single_image, slide.get('title', ''), slide.get('content', ''))
+                    future_to_index[future] = i
+            
+            # Collect results as they complete
+            results = {}
+            for future in concurrent.futures.as_completed(future_to_index):
+                slide_index = future_to_index[future]
+                result = future.result()
+                results[slide_index] = result
+        
+        # Update slides with generated images
+        for slide_index, result in results.items():
+            if result['success']:
+                slides[slide_index]['generated_image'] = result['image_url']
+                slides[slide_index]['image_caption'] = result['caption']
+            else:
+                slides[slide_index]['image_error'] = result['error']
+                print(f"Slide {slide_index} error: {result['error']}")
+        
+        return jsonify({
+            'slides': slides,
+            'generated_count': len([r for r in results.values() if r['success']]),
+            'error_count': len([r for r in results.values() if not r['success']])
+        })
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
