@@ -1484,6 +1484,27 @@
                 
                 if (response.ok) {
                     currentSlides = result.slides;
+                    
+                    // NEW: Generate image prompts separately
+                    for (let i = 0; i < currentSlides.length; i++) {
+                        if (currentSlides[i].type === 'content') {
+                            // Generate simple image prompt for each content slide
+                            const promptResponse = await fetch('/generate_image_prompt', {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({
+                                    title: currentSlides[i].title,
+                                    content: currentSlides[i].content
+                                })
+                            });
+                            
+                            if (promptResponse.ok) {
+                                const promptResult = await promptResponse.json();
+                                currentSlides[i].suggested_image_prompt = promptResult.prompt;
+                            }
+                        }
+                    }
+                    
                     renderSlidesList();
                     // Success message will be shown briefly
                     setTimeout(() => {

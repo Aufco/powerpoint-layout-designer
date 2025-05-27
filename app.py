@@ -252,6 +252,32 @@ def generate_image_code(element, index):
     
     return lines
 
+def generate_simple_image_prompt(slide_title, slide_content=None):
+    """Generate a simple, direct image prompt for a slide"""
+    try:
+        # Extract first bullet point if content exists
+        first_bullet = ""
+        if slide_content:
+            bullet_points = parse_bullet_points(slide_content)
+            if bullet_points:
+                first_bullet = bullet_points[0]
+        
+        # Simple, direct prompt generation
+        response = openai_client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "Create a simple, direct image prompt for an educational slide. The image should clearly illustrate the main topic. Be literal and specific. No artistic interpretations."},
+                {"role": "user", "content": f"Create an image prompt for a slide titled '{slide_title}'.\n{f'The slide discusses: {first_bullet}' if first_bullet else ''}\n\nGenerate a simple, direct prompt that shows exactly what the slide is about. Example: If the slide is about 'Baboon Social Structure', the prompt should be 'A group of baboons grooming each other'."}
+            ],
+            max_tokens=50,
+            temperature=0.3  # Lower temperature for more consistent results
+        )
+        
+        return response.choices[0].message.content.strip()
+    except:
+        # Simple fallback - no additional API calls
+        return f"An educational illustration showing {slide_title.lower()}"
+
 @app.route('/generate_draft', methods=['POST'])
 def generate_draft():
     """Generate a draft outline of slide titles based on user topic"""
@@ -333,26 +359,14 @@ def generate_content():
                 response = openai_client.chat.completions.create(
                     model="gpt-3.5-turbo",
                     messages=[
-                        {"role": "system", "content": "You are a presentation content writer. Create bullet points for PowerPoint slides. Provide each point as a separate line with NO bullet symbols, NO dashes, NO prefixes - just plain text. Each line will automatically become a bullet point in the presentation. Be concise and impactful. After the bullet points, also provide an image prompt for gpt-image-1 using the format [IMAGE_PROMPT: your prompt here][/IMAGE_PROMPT]. Create varied, interesting image prompts that relate to the slide topic. The image should NOT be a diagram, chart, or technical illustration. NO text, NO labels, NO arrows. Vary the style and approach for each prompt - use different artistic styles, perspectives, or visual approaches. Examples: 'A majestic cow grazing in a green meadow', 'A modern wind turbine against a sunset sky', 'A vintage chef's hat on a wooden table'."},
-                        {"role": "user", "content": f"Create content for this slide about '{topic}':\nSlide title: {slide['title']}\n\nProvide 3-5 bullet points. Each point should be on its own line with no bullet symbols. Then add a creative image prompt related to this slide topic. Make it visually interesting and varied in style. Example format:\nPoint one text here\nPoint two text here\nPoint three text here\n[IMAGE_PROMPT: A [creative description with varied style], no text or labels][/IMAGE_PROMPT]"}
+                        {"role": "system", "content": "You are a presentation content writer. Create bullet points for PowerPoint slides. Provide each point as a separate line with NO bullet symbols, NO dashes, NO prefixes - just plain text. Each line will automatically become a bullet point in the presentation. Be concise and impactful."},
+                        {"role": "user", "content": f"Create content for this slide about '{topic}':\nSlide title: {slide['title']}\n\nProvide 3-5 bullet points. Each point should be on its own line with no bullet symbols."}
                     ],
                     max_tokens=300,
                     temperature=0.7
                 )
                 
-                content_with_prompt = response.choices[0].message.content.strip()
-                
-                # Extract image prompt from markup
-                import re
-                image_prompt_match = re.search(r'\[IMAGE_PROMPT:\s*(.*?)\s*\]\[/IMAGE_PROMPT\]', content_with_prompt, re.DOTALL)
-                if image_prompt_match:
-                    slide['suggested_image_prompt'] = image_prompt_match.group(1).strip()
-                    # Remove the image prompt markup from the content
-                    slide['content'] = re.sub(r'\[IMAGE_PROMPT:.*?\]\[/IMAGE_PROMPT\]', '', content_with_prompt, flags=re.DOTALL).strip()
-                else:
-                    slide['content'] = content_with_prompt
-                    slide['suggested_image_prompt'] = None
-                
+                slide['content'] = response.choices[0].message.content.strip()
                 slide['content_generated'] = True
         
         return jsonify({'slides': slides})
@@ -363,34 +377,23 @@ def generate_content():
 def generate_single_image(slide_title, slide_content, custom_prompt=None):
     """Generate a single image using gpt-image-1"""
     try:
-        # Use custom prompt if provided, otherwise create default prompt
+        # Use custom prompt if provided, otherwise generate simple prompt
         if custom_prompt:
             image_prompt = custom_prompt
         else:
-            # Create highly recognizable object prompt for fallback when no custom prompt provided
-            # Use OpenAI to determine the most recognizable object for this topic
-            try:
-                prompt_response = openai_client.chat.completions.create(
-                    model="gpt-3.5-turbo",
-                    messages=[
-                        {"role": "system", "content": "You are an expert at creating varied, interesting image prompts for presentations. Create a creative visual prompt related to the given topic. Vary the artistic style, perspective, or approach. The image should NOT be a diagram, chart, or technical illustration. NO text, NO labels, NO arrows. Examples: 'A majestic cow grazing in a green meadow', 'A sleek wind turbine against a dramatic sky', 'A rustic chef's hat hanging in a cozy kitchen'."},
-                        {"role": "user", "content": f"Create a creative image prompt for the topic: '{slide_title}'. Make it visually interesting with varied style."}
-                    ],
-                    max_tokens=50,
-                    temperature=0.7
-                )
-                image_prompt = prompt_response.choices[0].message.content.strip()
-            except:
-                # Fallback if OpenAI call fails
-                image_prompt = f"An artistic representation related to '{slide_title}', no text or labels"
+            # Use the new simple prompt generation
+            image_prompt = generate_simple_image_prompt(slide_title, slide_content)
         
-        # Generate image using gpt-image-1
+        # Log the prompt for debugging
+        print(f"Generating image for '{slide_title}' with prompt: {image_prompt}")
+        
+        # Simplified parameters for gpt-image-1
         response = openai_client.images.generate(
             model="gpt-image-1",
             prompt=image_prompt,
             size="1024x1024",
-            quality="high",
-            background="transparent",
+            quality="auto",  # Changed to "auto" - a supported value
+            # Removed background parameter
             moderation="low"
         )
         
@@ -409,18 +412,8 @@ def generate_single_image(slide_title, slide_content, custom_prompt=None):
         # Return URL that can be served by Flask
         image_url = f"/static/generated_images/{image_filename}"
         
-        # Generate a simple caption
-        caption_response = openai_client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are a presentation assistant. Create a brief, professional caption for an educational diagram. Keep it under 10 words."},
-                {"role": "user", "content": f"Create a caption for an educational diagram on slide '{slide_title}' with content: {slide_content if slide_content else 'No additional content'}"}
-            ],
-            max_tokens=50,
-            temperature=0.7
-        )
-        
-        caption = caption_response.choices[0].message.content.strip()
+        # Instead of using OpenAI for captions, use simple logic:
+        caption = f"{slide_title} illustration"
         
         return {
             'image_url': image_url,
@@ -458,6 +451,20 @@ def generate_image():
     else:
         return jsonify({'error': result['error']}), 500
 
+@app.route('/generate_image_prompt', methods=['POST'])
+def generate_image_prompt():
+    """Generate a simple image prompt for a slide"""
+    data = request.json
+    slide_title = data.get('title', '')
+    slide_content = data.get('content', '')
+    
+    if not slide_title:
+        return jsonify({'error': 'Slide title is required'}), 400
+    
+    prompt = generate_simple_image_prompt(slide_title, slide_content)
+    
+    return jsonify({'prompt': prompt})
+
 @app.route('/generate_images_bulk', methods=['POST'])
 def generate_images_bulk():
     """Generate images for multiple slides concurrently using gpt-image-1"""
@@ -474,7 +481,9 @@ def generate_images_bulk():
             future_to_index = {}
             for i, slide in enumerate(slides):
                 if not slide.get('generated_image'):  # Only generate if no image exists
-                    future = executor.submit(generate_single_image, slide.get('title', ''), slide.get('content', ''))
+                    # Use the suggested prompt if available, otherwise generate
+                    custom_prompt = slide.get('suggested_image_prompt', None)
+                    future = executor.submit(generate_single_image, slide.get('title', ''), slide.get('content', ''), custom_prompt)
                     future_to_index[future] = i
             
             # Collect results as they complete
@@ -501,6 +510,42 @@ def generate_images_bulk():
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+def _add_image_placeholder(slide, element):
+    """Helper function to add image placeholder rectangle"""
+    rectangle = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(element['left']), 
+        Inches(element['top']), 
+        Inches(element['width']), 
+        Inches(element['height'])
+    )
+    
+    # Style the rectangle to look like an image placeholder
+    fill = rectangle.fill
+    fill.solid()
+    fill.fore_color.rgb = RGBColor(240, 240, 240)  # Light gray background
+    
+    line = rectangle.line
+    line.color.rgb = RGBColor(169, 169, 169)  # Gray border
+    line.width = Pt(1)
+    
+    # Add text to indicate this is an image placeholder
+    if rectangle.has_text_frame:
+        text_frame = rectangle.text_frame
+        text_frame.clear()
+        p = text_frame.paragraphs[0]
+        p.text = "[INSERT IMAGE HERE]"
+        p.alignment = PP_ALIGN.CENTER
+        text_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
+        
+        # Format the placeholder text
+        if p.runs:
+            for run in p.runs:
+                font = run.font
+                font.name = 'Calibri'
+                font.size = Pt(14)
+                font.color.rgb = RGBColor(128, 128, 128)  # Gray text
 
 @app.route('/create_presentation', methods=['POST'])
 def create_presentation():
@@ -659,41 +704,38 @@ def create_presentation():
                                     font.size = Pt(element.get('font_size', 18))
                                         
                 elif element['type'] == 'image':
-                    # Add image placeholder rectangle with border
-                    # Add a rectangle shape as image placeholder
-                    rectangle = slide.shapes.add_shape(
-                        MSO_SHAPE.RECTANGLE,
-                        Inches(element['left']), 
-                        Inches(element['top']), 
-                        Inches(element['width']), 
-                        Inches(element['height'])
-                    )
+                    # Check if the slide has a generated image
+                    generated_image_url = slide_data.get('generated_image', '')
                     
-                    # Style the rectangle to look like an image placeholder
-                    fill = rectangle.fill
-                    fill.solid()
-                    fill.fore_color.rgb = RGBColor(240, 240, 240)  # Light gray background
-                    
-                    line = rectangle.line
-                    line.color.rgb = RGBColor(169, 169, 169)  # Gray border
-                    line.width = Pt(1)
-                    
-                    # Add text to indicate this is an image placeholder
-                    if rectangle.has_text_frame:
-                        text_frame = rectangle.text_frame
-                        text_frame.clear()
-                        p = text_frame.paragraphs[0]
-                        p.text = "[INSERT IMAGE HERE]"
-                        p.alignment = PP_ALIGN.CENTER
-                        text_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
+                    if generated_image_url and generated_image_url.startswith('/static/generated_images/'):
+                        # Extract filename from URL and construct full path
+                        image_filename = generated_image_url.replace('/static/generated_images/', '')
+                        image_path = os.path.join(IMAGES_DIR, image_filename)
                         
-                        # Format the placeholder text
-                        if p.runs:
-                            for run in p.runs:
-                                font = run.font
-                                font.name = 'Calibri'
-                                font.size = Pt(14)
-                                font.color.rgb = RGBColor(128, 128, 128)  # Gray text
+                        # Check if the image file exists
+                        if os.path.exists(image_path):
+                            try:
+                                # Add the actual generated image
+                                picture = slide.shapes.add_picture(
+                                    image_path,
+                                    Inches(element['left']), 
+                                    Inches(element['top']), 
+                                    Inches(element['width']), 
+                                    Inches(element['height'])
+                                )
+                                print(f"Successfully added image: {image_filename}")
+                            except Exception as e:
+                                print(f"Error adding image {image_filename}: {str(e)}")
+                                # Fall back to placeholder if image loading fails
+                                _add_image_placeholder(slide, element)
+                        else:
+                            print(f"Image file not found: {image_path}")
+                            # Fall back to placeholder if file doesn't exist
+                            _add_image_placeholder(slide, element)
+                    else:
+                        print(f"No generated image found for slide: {slide_data['title']}")
+                        # Add placeholder if no generated image
+                        _add_image_placeholder(slide, element)
         
         # Save presentation to memory
         file_buffer = io.BytesIO()
