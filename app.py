@@ -1,7 +1,9 @@
-from flask import Flask, render_template, request, jsonify, send_file
+from flask import Flask, render_template, request, jsonify, send_file, send_from_directory
 import json
 import io
 import os
+import base64
+import uuid
 from datetime import datetime
 import openai
 from pptx import Presentation
@@ -22,6 +24,14 @@ app = Flask(__name__)
 # Initialize OpenAI client (users should set OPENAI_API_KEY environment variable)
 openai_client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
+# Create images directory if it doesn't exist
+IMAGES_DIR = os.path.join(os.path.dirname(__file__), 'static', 'generated_images')
+os.makedirs(IMAGES_DIR, exist_ok=True)
+
+@app.route('/static/generated_images/<filename>')
+def serve_generated_image(filename):
+    """Serve generated images"""
+    return send_from_directory(IMAGES_DIR, filename)
 
 def parse_bullet_points(content):
     """Parse content and extract bullet points - each line becomes a bullet point"""
@@ -323,14 +333,26 @@ def generate_content():
                 response = openai_client.chat.completions.create(
                     model="gpt-3.5-turbo",
                     messages=[
-                        {"role": "system", "content": "You are a presentation content writer. Create bullet points for PowerPoint slides. Provide each point as a separate line with NO bullet symbols, NO dashes, NO prefixes - just plain text. Each line will automatically become a bullet point in the presentation. Be concise and impactful."},
-                        {"role": "user", "content": f"Create content for this slide about '{topic}':\nSlide title: {slide['title']}\n\nProvide 3-5 bullet points. Each point should be on its own line with no bullet symbols. Example format:\nPoint one text here\nPoint two text here\nPoint three text here"}
+                        {"role": "system", "content": "You are a presentation content writer. Create bullet points for PowerPoint slides. Provide each point as a separate line with NO bullet symbols, NO dashes, NO prefixes - just plain text. Each line will automatically become a bullet point in the presentation. Be concise and impactful. After the bullet points, also provide an image prompt for gpt-image-1 using the format [IMAGE_PROMPT: your prompt here][/IMAGE_PROMPT]. Create varied, interesting image prompts that relate to the slide topic. The image should NOT be a diagram, chart, or technical illustration. NO text, NO labels, NO arrows. Vary the style and approach for each prompt - use different artistic styles, perspectives, or visual approaches. Examples: 'A majestic cow grazing in a green meadow', 'A modern wind turbine against a sunset sky', 'A vintage chef's hat on a wooden table'."},
+                        {"role": "user", "content": f"Create content for this slide about '{topic}':\nSlide title: {slide['title']}\n\nProvide 3-5 bullet points. Each point should be on its own line with no bullet symbols. Then add a creative image prompt related to this slide topic. Make it visually interesting and varied in style. Example format:\nPoint one text here\nPoint two text here\nPoint three text here\n[IMAGE_PROMPT: A [creative description with varied style], no text or labels][/IMAGE_PROMPT]"}
                     ],
-                    max_tokens=200,
+                    max_tokens=300,
                     temperature=0.7
                 )
                 
-                slide['content'] = response.choices[0].message.content.strip()
+                content_with_prompt = response.choices[0].message.content.strip()
+                
+                # Extract image prompt from markup
+                import re
+                image_prompt_match = re.search(r'\[IMAGE_PROMPT:\s*(.*?)\s*\]\[/IMAGE_PROMPT\]', content_with_prompt, re.DOTALL)
+                if image_prompt_match:
+                    slide['suggested_image_prompt'] = image_prompt_match.group(1).strip()
+                    # Remove the image prompt markup from the content
+                    slide['content'] = re.sub(r'\[IMAGE_PROMPT:.*?\]\[/IMAGE_PROMPT\]', '', content_with_prompt, flags=re.DOTALL).strip()
+                else:
+                    slide['content'] = content_with_prompt
+                    slide['suggested_image_prompt'] = None
+                
                 slide['content_generated'] = True
         
         return jsonify({'slides': slides})
@@ -338,27 +360,54 @@ def generate_content():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-def generate_single_image(slide_title, slide_content):
+def generate_single_image(slide_title, slide_content, custom_prompt=None):
     """Generate a single image using gpt-image-1"""
     try:
-        # Create simple hand-drawn style prompt with strict no-text requirements
-        base_style = "Simple hand-drawn sketch, black ink on white paper, clean minimal lines, NO TEXT, NO LABELS, NO WORDS, NO ARROWS, NO NUMBERS anywhere in the image."
-        
-        if slide_content:
-            image_prompt = f"{base_style} Hand-sketched illustration representing '{slide_title}' concept: {slide_content}. Minimalist line drawing style, looks like human drawn on paper with pen. Simple shapes and symbols only."
+        # Use custom prompt if provided, otherwise create default prompt
+        if custom_prompt:
+            image_prompt = custom_prompt
         else:
-            image_prompt = f"{base_style} Hand-sketched illustration representing '{slide_title}'. Minimalist line drawing style, looks like human drawn on paper with pen. Simple shapes and symbols only."
+            # Create highly recognizable object prompt for fallback when no custom prompt provided
+            # Use OpenAI to determine the most recognizable object for this topic
+            try:
+                prompt_response = openai_client.chat.completions.create(
+                    model="gpt-3.5-turbo",
+                    messages=[
+                        {"role": "system", "content": "You are an expert at creating varied, interesting image prompts for presentations. Create a creative visual prompt related to the given topic. Vary the artistic style, perspective, or approach. The image should NOT be a diagram, chart, or technical illustration. NO text, NO labels, NO arrows. Examples: 'A majestic cow grazing in a green meadow', 'A sleek wind turbine against a dramatic sky', 'A rustic chef's hat hanging in a cozy kitchen'."},
+                        {"role": "user", "content": f"Create a creative image prompt for the topic: '{slide_title}'. Make it visually interesting with varied style."}
+                    ],
+                    max_tokens=50,
+                    temperature=0.7
+                )
+                image_prompt = prompt_response.choices[0].message.content.strip()
+            except:
+                # Fallback if OpenAI call fails
+                image_prompt = f"An artistic representation related to '{slide_title}', no text or labels"
         
-        # Generate image using dall-e-3 (fallback while testing gpt-image-1)
+        # Generate image using gpt-image-1
         response = openai_client.images.generate(
-            model="dall-e-3",
+            model="gpt-image-1",
             prompt=image_prompt,
             size="1024x1024",
-            quality="standard",
-            n=1
+            quality="high",
+            background="transparent",
+            moderation="low"
         )
         
-        image_url = response.data[0].url
+        # gpt-image-1 returns base64 data, save as file and return URL
+        image_base64 = response.data[0].b64_json
+        
+        # Generate unique filename
+        image_filename = f"generated_{uuid.uuid4().hex[:8]}_{int(datetime.now().timestamp())}.png"
+        image_path = os.path.join(IMAGES_DIR, image_filename)
+        
+        # Save base64 image to file
+        image_bytes = base64.b64decode(image_base64)
+        with open(image_path, 'wb') as f:
+            f.write(image_bytes)
+        
+        # Return URL that can be served by Flask
+        image_url = f"/static/generated_images/{image_filename}"
         
         # Generate a simple caption
         caption_response = openai_client.chat.completions.create(
@@ -393,11 +442,12 @@ def generate_image():
     data = request.json
     slide_title = data.get('title', '')
     slide_content = data.get('content', '')
+    custom_prompt = data.get('custom_prompt', None)
     
     if not slide_title:
         return jsonify({'error': 'Slide title is required'}), 400
     
-    result = generate_single_image(slide_title, slide_content)
+    result = generate_single_image(slide_title, slide_content, custom_prompt)
     
     if result['success']:
         return jsonify({
