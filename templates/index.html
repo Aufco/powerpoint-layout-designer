@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PowerPoint Layout Designer</title>
+    <title>PowerPoint Presentation Creator</title>
     <style>
         * {
             margin: 0;
@@ -14,328 +14,287 @@
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: #f5f5f5;
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        .container {
+            min-height: 100vh;
             display: flex;
-            height: 100vh;
+            flex-direction: column;
         }
 
-        /* Toolbar */
-        .toolbar {
-            width: 250px;
+        /* Header */
+        .header {
             background: #2c3e50;
             color: white;
             padding: 20px;
-            overflow-y: auto;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
-        .toolbar h2 {
-            margin-bottom: 20px;
-            color: #ecf0f1;
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 5px;
         }
 
-        .section {
-            margin-bottom: 25px;
-        }
-
-        .section h3 {
+        .header p {
+            font-size: 14px;
             color: #bdc3c7;
-            margin-bottom: 10px;
-            font-size: 14px;
-            text-transform: uppercase;
         }
 
-        .btn {
-            width: 100%;
-            padding: 12px;
-            margin: 5px 0;
-            background: #3498db;
-            color: white;
+        /* Navigation */
+        .nav-tabs {
+            background: #34495e;
+            display: flex;
+            padding: 0 20px;
+        }
+
+        .nav-tab {
+            background: none;
             border: none;
-            border-radius: 4px;
+            color: #bdc3c7;
+            padding: 15px 30px;
+            font-size: 16px;
             cursor: pointer;
-            font-size: 14px;
-            transition: background 0.2s;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
         }
 
-        .btn:hover {
-            background: #2980b9;
+        .nav-tab:hover {
+            color: white;
         }
 
-        .btn.secondary {
-            background: #95a5a6;
+        .nav-tab.active {
+            color: white;
+            background: #2c3e50;
+            border-bottom-color: #3498db;
         }
 
-        .btn.secondary:hover {
-            background: #7f8c8d;
+        /* Main Container */
+        .main-container {
+            flex: 1;
+            padding: 40px 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
         }
 
-        .btn:disabled {
-            background: #7f8c8d;
-            cursor: not-allowed;
+        /* Content Planner Section */
+        .content-planner {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .planner-header {
+            margin-bottom: 30px;
+        }
+
+        .input-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 8px;
+            margin-bottom: 30px;
         }
 
         .form-group {
-            margin: 10px 0;
+            margin-bottom: 20px;
         }
 
         .form-group label {
             display: block;
-            margin-bottom: 5px;
-            font-size: 12px;
-            color: #bdc3c7;
-        }
-
-        .form-group input, .form-group select {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #34495e;
-            border-radius: 4px;
-            background: #34495e;
-            color: white;
-            font-size: 12px;
-        }
-
-        /* Main Canvas Area */
-        .main-area {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            background: #ecf0f1;
-        }
-
-        .canvas-header {
-            background: white;
-            padding: 15px 20px;
-            border-bottom: 1px solid #bdc3c7;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .slide-type-selector {
-            padding: 8px 12px;
-            border: 1px solid #bdc3c7;
-            border-radius: 4px;
-            background: white;
-        }
-
-        .canvas-container {
-            flex: 1;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
-
-        /* PowerPoint Slide Canvas */
-        .slide-canvas {
-            width: 800px;
-            height: 450px; /* 16:9 ratio */
-            background: white;
-            border: 2px solid #34495e;
-            position: relative;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            overflow: hidden;
-            transition: background 0.3s ease;
-        }
-
-        .slide-canvas.title-slide {
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        }
-
-        .slide-canvas.content-slide {
-            background: white;
-        }
-
-        .slide-canvas::before {
-            content: '';
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            right: 10px;
-            bottom: 10px;
-            border: 1px dashed #dee2e6;
-            pointer-events: none;
-            opacity: 0.3;
-        }
-
-        .slide-canvas.title-slide::after {
-            content: 'TITLE SLIDE';
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            background: rgba(52, 152, 219, 0.1);
-            color: #3498db;
-            padding: 4px 8px;
-            font-size: 10px;
-            font-weight: bold;
-            border-radius: 3px;
-            pointer-events: none;
-        }
-
-        .slide-canvas.content-slide::after {
-            content: 'CONTENT SLIDE';
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            background: rgba(46, 204, 113, 0.1);
-            color: #27ae60;
-            padding: 4px 8px;
-            font-size: 10px;
-            font-weight: bold;
-            border-radius: 3px;
-            pointer-events: none;
-        }
-
-        /* Slide Elements */
-        .slide-element {
-            position: absolute;
-            border: 2px dashed transparent;
-            cursor: move;
-            min-width: 50px;
-            min-height: 30px;
-        }
-
-        .slide-element:hover {
-            border-color: #3498db;
-        }
-
-        .slide-element.selected {
-            border-color: #e74c3c;
-        }
-
-        .slide-element.textbox {
-            background: rgba(52, 152, 219, 0.1);
-            padding: 8px;
-        }
-
-        .slide-element.title {
-            background: rgba(231, 76, 60, 0.1);
-            padding: 8px;
-            font-weight: bold;
-        }
-
-        .slide-element.image {
-            background: rgba(46, 204, 113, 0.1);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #27ae60;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
             font-size: 14px;
         }
 
-        /* Resize handles */
-        .resize-handle {
-            position: absolute;
-            width: 8px;
-            height: 8px;
-            background: #e74c3c;
-            border: 1px solid white;
-        }
-
-        .resize-handle.nw { top: -4px; left: -4px; cursor: nw-resize; }
-        .resize-handle.ne { top: -4px; right: -4px; cursor: ne-resize; }
-        .resize-handle.sw { bottom: -4px; left: -4px; cursor: sw-resize; }
-        .resize-handle.se { bottom: -4px; right: -4px; cursor: se-resize; }
-        .resize-handle.n { top: -4px; left: 50%; margin-left: -4px; cursor: n-resize; }
-        .resize-handle.s { bottom: -4px; left: 50%; margin-left: -4px; cursor: s-resize; }
-        .resize-handle.w { left: -4px; top: 50%; margin-top: -4px; cursor: w-resize; }
-        .resize-handle.e { right: -4px; top: 50%; margin-top: -4px; cursor: e-resize; }
-
-        /* Properties Panel */
-        .properties-panel {
-            display: none;
-        }
-
-        .properties-panel.active {
-            display: block;
-        }
-
-        /* Modal */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
+        .form-group input,
+        .form-group select {
             width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 1000;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            transition: border-color 0.3s;
         }
 
-        .modal.active {
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        /* Progress Steps */
+        .progress-steps {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            padding: 0 10px;
+        }
+
+        .step {
+            flex: 1;
+            text-align: center;
+            position: relative;
+        }
+
+        .step:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            top: 20px;
+            right: -50%;
+            width: 100%;
+            height: 2px;
+            background: #ddd;
+            z-index: 1;
+        }
+
+        .step.completed:not(:last-child)::after {
+            background: #27ae60;
+        }
+
+        .step-circle {
+            width: 40px;
+            height: 40px;
+            background: #ddd;
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
+            margin: 0 auto 10px;
+            position: relative;
+            z-index: 2;
+            font-weight: bold;
+            color: white;
+            transition: all 0.3s;
         }
 
-        .modal-content {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            max-width: 80%;
-            max-height: 80%;
-            overflow: auto;
+        .step.active .step-circle {
+            background: #3498db;
+            box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.2);
         }
 
-        .code-output {
-            background: #2c3e50;
-            color: #ecf0f1;
-            padding: 15px;
-            border-radius: 4px;
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            white-space: pre-wrap;
-            max-height: 400px;
-            overflow-y: auto;
+        .step.completed .step-circle {
+            background: #27ae60;
         }
 
-        .modal-actions {
-            margin-top: 15px;
+        .step-label {
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+
+        .step.active .step-label,
+        .step.completed .step-label {
+            color: #2c3e50;
+            font-weight: 500;
+        }
+
+        /* Action Buttons */
+        .action-buttons {
             display: flex;
-            gap: 10px;
+            gap: 15px;
+            margin-top: 25px;
         }
 
-        /* Content Planner Styles */
+        .btn {
+            padding: 14px 24px;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:disabled {
+            background: #bdc3c7 !important;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #2980b9;
+        }
+
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+
+        .btn-success:hover:not(:disabled) {
+            background: #229954;
+        }
+
+        .btn-purple {
+            background: #9b59b6;
+            color: white;
+        }
+
+        .btn-purple:hover:not(:disabled) {
+            background: #8e44ad;
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background: #c0392b;
+        }
+
+        /* Slides Content Section */
+        .slides-content {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .slides-content.active {
+            display: block;
+        }
+
         .slide-item {
             background: #f8f9fa;
             border: 1px solid #dee2e6;
             border-radius: 4px;
-            padding: 15px;
-            margin: 10px 0;
-            transition: border-color 0.2s;
+            padding: 20px;
+            margin-bottom: 20px;
             position: relative;
+            transition: all 0.3s;
         }
 
         .slide-item:hover {
             border-color: #3498db;
+            box-shadow: 0 2px 8px rgba(52, 152, 219, 0.1);
+        }
+
+        .slide-number {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: #6c757d;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
         }
 
         .slide-header {
             display: flex;
             align-items: center;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
-
-        .slide-number {
-            position: absolute;
-            bottom: 10px;
-            left: 15px;
-            background: #6c757d;
-            color: white;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-size: 11px;
-            font-weight: bold;
+            gap: 15px;
+            margin-bottom: 15px;
         }
 
         .slide-type-badge {
-            padding: 4px 8px;
+            padding: 6px 12px;
             border-radius: 3px;
             font-size: 12px;
             font-weight: bold;
@@ -354,57 +313,344 @@
 
         .slide-title {
             flex: 1;
-            padding: 8px;
-            border: 1px solid #bdc3c7;
+            padding: 10px;
+            border: 1px solid #ddd;
             border-radius: 4px;
-            font-size: 14px;
+            font-size: 16px;
         }
 
         .slide-content {
-            margin-top: 10px;
+            margin-top: 15px;
         }
 
         .slide-content textarea {
             width: 100%;
-            min-height: 80px;
-            padding: 8px;
-            border: 1px solid #bdc3c7;
+            min-height: 100px;
+            padding: 12px;
+            border: 1px solid #ddd;
             border-radius: 4px;
-            font-size: 13px;
+            font-size: 14px;
             resize: vertical;
+            font-family: inherit;
+        }
+
+        .image-section {
+            margin-top: 15px;
+            padding: 15px;
+            background: #e8f4f8;
+            border-radius: 4px;
+            border: 1px solid #bee5eb;
+        }
+
+        .image-prompt-label {
+            font-size: 13px;
+            color: #0c5460;
+            font-weight: bold;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .generated-image {
+            margin-top: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+            text-align: center;
+        }
+
+        .generated-image img {
+            max-width: 300px;
+            max-height: 200px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
         .slide-actions {
-            margin-top: 10px;
-            margin-bottom: 25px;
+            margin-top: 15px;
             display: flex;
-            gap: 8px;
+            gap: 10px;
         }
 
         .slide-actions button {
-            padding: 6px 12px;
-            font-size: 12px;
+            padding: 8px 16px;
+            font-size: 13px;
             border: none;
             border-radius: 3px;
             cursor: pointer;
+            transition: all 0.3s;
         }
 
-        .slide-actions .btn-delete {
+        .btn-move {
+            background: #95a5a6;
+            color: white;
+        }
+
+        .btn-move:hover {
+            background: #7f8c8d;
+        }
+
+        .btn-generate-image {
+            background: #9b59b6;
+            color: white;
+        }
+
+        .btn-generate-image:hover {
+            background: #8e44ad;
+        }
+
+        .btn-delete {
             background: #e74c3c;
             color: white;
         }
 
-        .slide-actions .btn-up {
-            background: #95a5a6;
+        .btn-delete:hover {
+            background: #c0392b;
+        }
+
+        /* Template Selection Styles */
+        .template-selection {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .template-option {
+            display: flex;
+            align-items: center;
+            background: white;
+            border: 2px solid #e1e4e8;
+            border-radius: 8px;
+            padding: 15px;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .template-option:hover {
+            border-color: #3498db;
+            box-shadow: 0 2px 8px rgba(52, 152, 219, 0.1);
+        }
+
+        .template-option input[type="radio"] {
+            margin-right: 15px;
+            width: auto;
+            flex-shrink: 0;
+        }
+
+        .template-option label {
+            flex: 1;
+            cursor: pointer;
+            margin-bottom: 0;
+        }
+
+        .template-name {
+            display: block;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 4px;
+        }
+
+        .template-desc {
+            display: block;
+            font-size: 13px;
+            color: #6c757d;
+        }
+
+        .btn-edit {
+            padding: 8px 16px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+
+        .btn-edit:hover {
+            background: #2980b9;
+        }
+
+        /* Template Editor Modal */
+        .template-editor-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 3000;
+        }
+
+        .template-editor-content {
+            background: white;
+            width: 90%;
+            max-width: 1400px;
+            height: 90%;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .editor-header {
+            background: #2c3e50;
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .editor-header h2 {
+            margin: 0;
+            font-size: 24px;
+        }
+
+        .editor-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 28px;
+            cursor: pointer;
+            padding: 0;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: background 0.3s;
+        }
+
+        .editor-close:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .editor-body {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .editor-toolbar {
+            width: 280px;
+            background: #f8f9fa;
+            padding: 25px;
+            overflow-y: auto;
+        }
+
+        .canvas-area {
+            flex: 1;
+            background: #e9ecef;
+            padding: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: auto;
+        }
+
+        .slide-canvas {
+            width: 960px;
+            height: 540px;
+            background: white;
+            border: 2px solid #34495e;
+            position: relative;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+            transform-origin: center;
+        }
+
+        .editor-footer {
+            background: #f8f9fa;
+            padding: 20px 30px;
+            border-top: 1px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .template-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-reset {
+            background: #6c757d;
             color: white;
         }
 
-        .slide-actions .btn-down {
-            background: #95a5a6;
+        .btn-reset:hover {
+            background: #5a6268;
+        }
+
+        .btn-save {
+            background: #27ae60;
             color: white;
         }
 
-        /* Loading indicator */
+        .btn-save:hover {
+            background: #229954;
+        }
+
+        /* Canvas elements */
+        .canvas-element {
+            position: absolute;
+            border: 2px solid transparent;
+            padding: 10px;
+            cursor: move;
+            transition: border-color 0.3s;
+        }
+
+        .canvas-element:hover {
+            border-color: #3498db;
+        }
+
+        .canvas-element.selected {
+            border-color: #2980b9;
+            box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.2);
+        }
+
+        .canvas-element.title {
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .canvas-element.textbox {
+            font-size: 18px;
+        }
+
+        .canvas-element.image {
+            background: #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6c757d;
+            font-size: 16px;
+        }
+
+        .resize-handle {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #3498db;
+            border: 2px solid white;
+            display: none;
+        }
+
+        .canvas-element.selected .resize-handle {
+            display: block;
+        }
+
+        .resize-handle.nw { top: -5px; left: -5px; cursor: nw-resize; }
+        .resize-handle.ne { top: -5px; right: -5px; cursor: ne-resize; }
+        .resize-handle.sw { bottom: -5px; left: -5px; cursor: sw-resize; }
+        .resize-handle.se { bottom: -5px; right: -5px; cursor: se-resize; }
+
+        /* Loading overlay */
         .loading-overlay {
             position: fixed;
             top: 0;
@@ -420,152 +666,239 @@
 
         .loading-content {
             background: white;
-            padding: 30px;
+            padding: 40px;
             border-radius: 8px;
             text-align: center;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         }
 
         .spinner {
             border: 4px solid #f3f3f3;
             border-top: 4px solid #3498db;
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
+            width: 50px;
+            height: 50px;
             animation: spin 1s linear infinite;
-            margin: 0 auto 15px;
+            margin: 0 auto 20px;
         }
 
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #7f8c8d;
+        }
+
+        .empty-state h3 {
+            font-size: 20px;
+            margin-bottom: 10px;
+            color: #34495e;
+        }
+
+        /* Template message */
+        .template-message {
+            background: #e8f4fd;
+            border: 1px solid #bee5eb;
+            border-radius: 4px;
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            color: #0c5460;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .template-message .icon {
+            font-size: 18px;
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <!-- Toolbar -->
-        <div class="toolbar">
-            <h2>Layout Designer</h2>
-            
-            <div class="section">
-                <h3>Template Selection</h3>
+    <div class="header">
+        <h1>PowerPoint Presentation Creator</h1>
+        <p>Create professional presentations with AI-powered content and custom layouts</p>
+    </div>
+
+    <!-- Removed navigation tabs -->
+
+    <div class="main-container">
+        <!-- Content Planner Section -->
+        <div id="planner-section" class="content-planner">
+            <div class="planner-header">
+                <h2>Create Your Presentation</h2>
+                <p>Follow the steps below to generate a complete PowerPoint presentation</p>
+            </div>
+
+            <!-- Progress Steps -->
+            <div class="progress-steps">
+                <div class="step active" id="step-1">
+                    <div class="step-circle">1</div>
+                    <div class="step-label">Setup</div>
+                </div>
+                <div class="step" id="step-2">
+                    <div class="step-circle">2</div>
+                    <div class="step-label">Draft</div>
+                </div>
+                <div class="step" id="step-3">
+                    <div class="step-circle">3</div>
+                    <div class="step-label">Content</div>
+                </div>
+                <div class="step" id="step-4">
+                    <div class="step-circle">4</div>
+                    <div class="step-label">Images</div>
+                </div>
+                <div class="step" id="step-5">
+                    <div class="step-circle">5</div>
+                    <div class="step-label">Create</div>
+                </div>
+            </div>
+
+            <!-- Input Section -->
+            <div class="input-section">
                 <div class="form-group">
-                    <label>Content Template:</label>
-                    <select id="template-selector" onchange="changeTemplate()">
-                        <option value="standard">Standard Content Template</option>
-                        <option value="with-image">My Content Template (with Image)</option>
-                    </select>
+                    <label for="presentation-topic">Presentation Topic</label>
+                    <input type="text" id="presentation-topic" placeholder="e.g., Introduction to Machine Learning">
                 </div>
-            </div>
 
-            <div class="section">
-                <h3>Add Elements</h3>
-                <button class="btn" onclick="addElement('title')">Add Title Box</button>
-                <button class="btn" onclick="addElement('textbox')">Add Text Box</button>
-                <button class="btn" onclick="addElement('image')">Add Image Box</button>
-            </div>
-
-            <div class="section">
-                <h3>Layout Actions</h3>
-                <button class="btn secondary" onclick="clearSlide()">Clear Slide</button>
-                <button class="btn secondary" onclick="saveLayout()">Save Layout</button>
-                <button class="btn secondary" onclick="loadLayout()">Load Layout</button>
-            </div>
-
-            <div class="section">
-                <h3>Content Generation</h3>
                 <div class="form-group">
-                    <label>Presentation Topic:</label>
-                    <input type="text" id="presentation-topic" placeholder="e.g., Machine Learning Basics">
+                    <label for="audience">Target Audience</label>
+                    <input type="text" id="audience" placeholder="e.g., University students, Business executives">
                 </div>
-                <button class="btn" onclick="generateDraft()" style="background: #9b59b6;">Generate Draft</button>
-                <button class="btn" onclick="showContentPlanner()" style="background: #e67e22;">Content Planner</button>
+
+                <div class="form-group">
+                    <label>Template Selection</label>
+                    <div class="template-selection">
+                        <div class="template-option" data-template="with-image">
+                            <input type="radio" name="template" id="template-with-image" value="with-image" checked>
+                            <label for="template-with-image">
+                                <span class="template-name">Default Template (with image)</span>
+                                <span class="template-desc">Includes an image placeholder on content slides</span>
+                            </label>
+                            <button class="btn-edit" onclick="editTemplate('with-image')">✏️ Edit</button>
+                        </div>
+                        <div class="template-option" data-template="standard">
+                            <input type="radio" name="template" id="template-standard" value="standard">
+                            <label for="template-standard">
+                                <span class="template-name">Standard Template (no image)</span>
+                                <span class="template-desc">Text-only layout for content slides</span>
+                            </label>
+                            <button class="btn-edit" onclick="editTemplate('standard')">✏️ Edit</button>
+                        </div>
+                        <div class="template-option" data-template="new">
+                            <input type="radio" name="template" id="template-new" value="new">
+                            <label for="template-new">
+                                <span class="template-name">Create New Template</span>
+                                <span class="template-desc">Start from scratch with a blank template</span>
+                            </label>
+                            <button class="btn-edit" onclick="editTemplate('new')">➕ Create</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-primary" id="generate-draft-btn" onclick="generateDraft()">
+                        <span>📝</span> Generate Draft
+                    </button>
+                    <button class="btn btn-success" id="generate-content-btn" onclick="generateContent()" disabled>
+                        <span>✍️</span> Generate Content
+                    </button>
+                    <button class="btn btn-purple" id="generate-images-btn" onclick="generateAllImages()" disabled>
+                        <span>🎨</span> Generate All Images
+                    </button>
+                    <button class="btn btn-danger" id="create-ppt-btn" onclick="createPresentation()" disabled>
+                        <span>📊</span> Create PowerPoint
+                    </button>
+                </div>
             </div>
 
-            <div class="section">
-                <h3>Generate Code</h3>
-                <button class="btn" onclick="generateCode()" style="background: #27ae60;">Generate Python Code</button>
+            <!-- Slides Content Section -->
+            <div class="slides-content" id="slides-content">
+                <h3>Presentation Outline</h3>
+                <div id="slides-list">
+                    <!-- Slides will be dynamically added here -->
+                </div>
+                <div style="margin-top: 20px;">
+                    <button class="btn btn-primary" onclick="addSlide()">
+                        <span>➕</span> Add Slide
+                    </button>
+                </div>
             </div>
 
-            <!-- Properties Panel -->
-            <div id="properties-panel" class="properties-panel">
-                <div class="section">
-                    <h3>Element Properties</h3>
-                    
-                    <div class="form-group">
-                        <label>Content:</label>
-                        <input type="text" id="element-content" onchange="updateSelectedElement()">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Font Family:</label>
-                        <select id="element-font" onchange="updateSelectedElement()">
-                            <option value="Arial">Arial</option>
-                            <option value="Times New Roman">Times New Roman</option>
-                            <option value="Calibri">Calibri</option>
-                            <option value="Helvetica">Helvetica</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Font Size:</label>
-                        <input type="number" id="element-font-size" value="18" min="8" max="72" onchange="updateSelectedElement()">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>List Type:</label>
-                        <select id="element-list-type" onchange="updateSelectedElement()">
-                            <option value="none">None</option>
-                            <option value="bullet">Bullet</option>
-                            <option value="numbered">Numbered</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Position X (inches):</label>
-                        <input type="number" id="element-x" step="0.1" onchange="updateSelectedElementPosition()">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Position Y (inches):</label>
-                        <input type="number" id="element-y" step="0.1" onchange="updateSelectedElementPosition()">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Width (inches):</label>
-                        <input type="number" id="element-width" step="0.1" min="0.5" onchange="updateSelectedElementSize()">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Height (inches):</label>
-                        <input type="number" id="element-height" step="0.1" min="0.3" onchange="updateSelectedElementSize()">
-                    </div>
-                    
-                    <button class="btn" style="background: #e74c3c; margin-top: 10px;" onclick="deleteSelectedElement()">Delete Element</button>
-                </div>
+            <!-- Empty State -->
+            <div class="empty-state" id="empty-state">
+                <h3>Ready to create your presentation!</h3>
+                <p>Enter your topic and audience above, then click "Generate Draft" to begin.</p>
             </div>
         </div>
 
-        <!-- Main Canvas Area -->
-        <div class="main-area">
-            <div class="canvas-header">
-                <label>Slide Type:</label>
-                <select class="slide-type-selector" id="slide-type" onchange="updateSlideType()">
-                    <option value="title">Title Slide</option>
-                    <option value="content">Content Slide</option>
-                </select>
-                <span style="color: #7f8c8d; font-size: 14px;">
-                    Design layouts for both slide types • Layouts are saved automatically when switching
-                </span>
-                <div style="margin-left: auto; font-size: 12px; color: #7f8c8d;">
-                    <span id="layout-status">Standard template loaded</span>
+        <!-- Template Editor Modal -->
+        <div id="template-editor-modal" class="template-editor-modal">
+            <div class="template-editor-content">
+                <div class="editor-header">
+                    <h2 id="editor-title">Template Editor</h2>
+                    <button class="editor-close" onclick="closeTemplateEditor()">×</button>
                 </div>
-            </div>
-            
-            <div class="canvas-container">
-                <div class="slide-canvas" id="slide-canvas">
-                    <!-- Dynamic elements will be added here -->
+                
+                <div class="editor-body">
+                    <div class="editor-toolbar">
+                        <h3>Slide Type</h3>
+                        <select id="slide-type" onchange="updateSlideType()" style="width: 100%; margin-bottom: 20px; padding: 10px;">
+                            <option value="title">Title Slide</option>
+                            <option value="content">Content Slide</option>
+                        </select>
+
+                        <h3>Add Elements</h3>
+                        <button class="btn btn-primary" onclick="addElement('title')" style="width: 100%; margin-bottom: 10px;">
+                            <span>📝</span> Add Title Box
+                        </button>
+                        <button class="btn btn-primary" onclick="addElement('textbox')" style="width: 100%; margin-bottom: 10px;">
+                            <span>📄</span> Add Text Box
+                        </button>
+                        <button class="btn btn-primary" onclick="addElement('image')" style="width: 100%; margin-bottom: 20px;">
+                            <span>🖼️</span> Add Image Box
+                        </button>
+
+                        <h3>Element Properties</h3>
+                        <div id="element-properties" style="display: none;">
+                            <div class="form-group">
+                                <label>Font Size</label>
+                                <input type="number" id="prop-font-size" min="8" max="72" onchange="updateElementProperty('fontSize')">
+                            </div>
+                            <div class="form-group">
+                                <label>Text Content</label>
+                                <textarea id="prop-content" rows="3" onchange="updateElementProperty('content')" style="width: 100%;"></textarea>
+                            </div>
+                            <button class="btn btn-danger" onclick="deleteSelectedElement()" style="width: 100%; margin-top: 10px;">
+                                <span>🗑️</span> Delete Element
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="canvas-area">
+                        <div class="slide-canvas" id="slide-canvas">
+                            <!-- Elements will be added here -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="editor-footer">
+                    <div class="template-info">
+                        <span id="template-status">Editing: Default Template</span>
+                    </div>
+                    <div class="template-actions">
+                        <button class="btn btn-reset" onclick="resetTemplate()">
+                            <span>↺</span> Reset to Default
+                        </button>
+                        <button class="btn btn-save" onclick="saveTemplate()">
+                            <span>💾</span> Save Template
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -575,80 +908,26 @@
     <div id="loading-overlay" class="loading-overlay">
         <div class="loading-content">
             <div class="spinner"></div>
-            <p>Generating content...</p>
-        </div>
-    </div>
-
-    <!-- Modal for Code Output -->
-    <div id="code-modal" class="modal">
-        <div class="modal-content">
-            <h3>Generated Python Code</h3>
-            <div id="code-output" class="code-output"></div>
-            <div class="modal-actions">
-                <button class="btn" onclick="copyCode()">Copy to Clipboard</button>
-                <button class="btn" onclick="downloadCode()">Download File</button>
-                <button class="btn secondary" onclick="closeModal()">Close</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal for Content Planning -->
-    <div id="content-modal" class="modal">
-        <div class="modal-content" style="max-width: 90%; max-height: 90%;">
-            <h3>Presentation Content Planner</h3>
-            <div id="content-planner">
-                <div id="draft-section" style="display: none;">
-                    <h4>Draft Outline</h4>
-                    <p>Review and edit your presentation outline:</p>
-                    <div id="slides-list"></div>
-                    <div style="margin: 15px 0;">
-                        <button class="btn" onclick="addSlide()" style="background: #3498db;">Add Slide</button>
-                        <button class="btn" onclick="generateFullContent()" id="generate-content-btn" style="background: #27ae60;">Generate Content</button>
-                        <button class="btn" onclick="generateAllImages()" id="generate-all-images-btn" style="background: #9b59b6;">🎨 Generate All Images</button>
-                        <button class="btn" onclick="createPresentation()" style="background: #e74c3c;">Create PowerPoint</button>
-                    </div>
-                </div>
-                
-                <div id="no-draft-section">
-                    <p>Generate a draft outline first using the "Generate Draft" button in the sidebar.</p>
-                </div>
-            </div>
-            <div class="modal-actions">
-                <button class="btn secondary" onclick="closeContentModal()">Close</button>
-            </div>
+            <p id="loading-text">Loading...</p>
         </div>
     </div>
 
     <script>
         // Global variables
-        let selectedElement = null;
-        let elementCounter = 0;
-        let isDragging = false;
-        let isResizing = false;
-        let dragOffset = { x: 0, y: 0 };
-        let generatedCode = '';
-        let generatedFilename = '';
         let currentSlides = [];
         let currentTopic = '';
-        let currentTemplate = 'standard';
-        
-        // Store separate layouts for title and content slides
-        let savedLayouts = {
-            title: null,
-            content: null
-        };
+        let currentAudience = '';
+        let currentTemplate = 'with-image';
+        let currentStep = 1;
 
-        // Constants for slide dimensions (16:9 aspect ratio)
-        const PIXELS_PER_INCH = 80;
-        const SLIDE_WIDTH_INCHES = 13.333;  // 16:9 widescreen format
-        const SLIDE_HEIGHT_INCHES = 7.5;     // 16:9 widescreen format
-        const CANVAS_WIDTH = 800;            // Canvas display width
-        const CANVAS_HEIGHT = 450;           // Canvas display height (16:9 ratio)
-
-        // Standard template layouts matching python-pptx defaults for 16:9 format
-        const STANDARD_TEMPLATES = {
-            standard: {
+        // Template editor variables
+        let selectedElement = null;
+        let elementCounter = 0;
+        let currentEditingTemplate = null;
+        let templateLayouts = {
+            'standard': {
                 title: {
+                    slide_type: 'title',
                     elements: [
                         {
                             type: 'title',
@@ -675,6 +954,7 @@
                     ]
                 },
                 content: {
+                    slide_type: 'content',
                     elements: [
                         {
                             type: 'title',
@@ -703,6 +983,7 @@
             },
             'with-image': {
                 title: {
+                    slide_type: 'title',
                     elements: [
                         {
                             type: 'title',
@@ -729,6 +1010,7 @@
                     ]
                 },
                 content: {
+                    slide_type: 'content',
                     elements: [
                         {
                             type: 'title',
@@ -767,526 +1049,219 @@
                 }
             }
         };
-
+        
+        // Store original templates for reset functionality
+        const originalTemplates = JSON.parse(JSON.stringify(templateLayouts));
+        
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
-            setupEventListeners();
-            updateSlideType(); // Initialize slide type styling and default template
+            updateProgressSteps();
+            
+            // Load saved templates from localStorage if available
+            const savedTemplates = localStorage.getItem('customTemplates');
+            if (savedTemplates) {
+                Object.assign(templateLayouts, JSON.parse(savedTemplates));
+            }
+            
+            // Add radio button change listener
+            document.querySelectorAll('input[name="template"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    currentTemplate = this.value;
+                });
+            });
         });
 
-        function setupEventListeners() {
-            const canvas = document.getElementById('slide-canvas');
+        // Template editor functions
+        function editTemplate(templateId) {
+            currentEditingTemplate = templateId;
+            const modal = document.getElementById('template-editor-modal');
+            modal.style.display = 'flex';
             
-            // Canvas click to deselect
-            canvas.addEventListener('click', function(e) {
-                if (e.target === canvas) {
-                    deselectElement();
-                }
-            });
-        }
-
-        function addElement(type) {
+            // Clear canvas
             const canvas = document.getElementById('slide-canvas');
-            const statusEl = document.getElementById('layout-status');
+            canvas.innerHTML = '';
+            selectedElement = null;
+            elementCounter = 0;
+            
+            // Update editor title
+            const editorTitle = document.getElementById('editor-title');
+            const templateStatus = document.getElementById('template-status');
+            
+            if (templateId === 'new') {
+                editorTitle.textContent = 'Create New Template';
+                templateStatus.textContent = 'Creating: New Template';
+            } else if (templateId === 'standard') {
+                editorTitle.textContent = 'Edit Standard Template';
+                templateStatus.textContent = 'Editing: Standard Template (no image)';
+                loadTemplateIntoEditor(templateLayouts.standard);
+            } else if (templateId === 'with-image') {
+                editorTitle.textContent = 'Edit Default Template';
+                templateStatus.textContent = 'Editing: Default Template (with image)';
+                loadTemplateIntoEditor(templateLayouts['with-image']);
+            }
+            
+            // Hide element properties panel
+            document.getElementById('element-properties').style.display = 'none';
+        }
+        
+        function closeTemplateEditor() {
+            const modal = document.getElementById('template-editor-modal');
+            modal.style.display = 'none';
+            currentEditingTemplate = null;
+            selectedElement = null;
+        }
+        
+        function loadTemplateIntoEditor(template) {
+            const canvas = document.getElementById('slide-canvas');
+            const slideType = document.getElementById('slide-type').value;
+            const layout = template[slideType];
+            
+            if (layout && layout.elements) {
+                layout.elements.forEach(elem => {
+                    const element = createCanvasElement(
+                        elem.type,
+                        elem.left * 72, // Convert inches to pixels (assuming 72 DPI)
+                        elem.top * 72,
+                        elem.width * 72,
+                        elem.height * 72,
+                        elem.content,
+                        elem.font_size
+                    );
+                    canvas.appendChild(element);
+                });
+            }
+        }
+        
+        function createCanvasElement(type, left, top, width, height, content, fontSize) {
             const element = document.createElement('div');
-            element.className = `slide-element ${type}`;
-            element.id = `element-${++elementCounter}`;
-            
-            // Default positioning and sizing
-            const defaultWidth = type === 'image' ? 200 : 300;
-            const defaultHeight = type === 'title' ? 60 : 80;
-            
-            element.style.left = '50px';
-            element.style.top = '50px';
-            element.style.width = defaultWidth + 'px';
-            element.style.height = defaultHeight + 'px';
-            
-            // Default content
-            let content = '';
-            if (type === 'title') content = 'Title Text';
-            else if (type === 'textbox') content = 'Sample text content';
-            else if (type === 'image') content = 'IMAGE';
-            
-            element.textContent = content;
-            
-            // Store element data
+            element.className = `canvas-element ${type}`;
+            element.id = `element-${elementCounter++}`;
+            element.style.left = `${left}px`;
+            element.style.top = `${top}px`;
+            element.style.width = `${width}px`;
+            element.style.height = `${height}px`;
+            element.style.fontSize = `${fontSize}px`;
+            element.textContent = content || 'New Element';
             element.dataset.type = type;
-            element.dataset.content = content;
-            element.dataset.fontSize = '18';
-            element.dataset.fontName = 'Arial';
-            element.dataset.listType = 'none';
+            element.dataset.fontSize = fontSize;
             
-            // Add event listeners
-            setupElementEvents(element);
+            // Add resize handles
+            ['nw', 'ne', 'sw', 'se'].forEach(pos => {
+                const handle = document.createElement('div');
+                handle.className = `resize-handle ${pos}`;
+                element.appendChild(handle);
+            });
             
-            canvas.appendChild(element);
-            selectElement(element);
-            
-            // Update status
-            const currentSlideType = document.getElementById('slide-type').value;
-            statusEl.textContent = `Custom ${currentSlideType} layout (modified)`;
-        }
-
-        function setupElementEvents(element) {
+            // Add click handler for selection
             element.addEventListener('click', function(e) {
                 e.stopPropagation();
-                selectElement(element);
+                selectElement(this);
             });
             
-            element.addEventListener('mousedown', function(e) {
-                if (e.target.classList.contains('resize-handle')) {
-                    startResize(e, element);
-                } else {
-                    startDrag(e, element);
-                }
-            });
+            // Make draggable
+            makeDraggable(element);
+            
+            return element;
         }
-
+        
         function selectElement(element) {
-            deselectElement();
-            selectedElement = element;
-            element.classList.add('selected');
-            addResizeHandles(element);
-            showProperties(element);
-        }
-
-        function deselectElement() {
+            // Deselect previous element
             if (selectedElement) {
                 selectedElement.classList.remove('selected');
-                removeResizeHandles(selectedElement);
-                selectedElement = null;
-            }
-            hideProperties();
-        }
-
-        function addResizeHandles(element) {
-            const handles = ['nw', 'n', 'ne', 'w', 'e', 'sw', 's', 'se'];
-            handles.forEach(handle => {
-                const handleEl = document.createElement('div');
-                handleEl.className = `resize-handle ${handle}`;
-                element.appendChild(handleEl);
-            });
-        }
-
-        function removeResizeHandles(element) {
-            const handles = element.querySelectorAll('.resize-handle');
-            handles.forEach(handle => handle.remove());
-        }
-
-        function startDrag(e, element) {
-            isDragging = true;
-            const rect = element.getBoundingClientRect();
-            dragOffset.x = e.clientX - rect.left;
-            dragOffset.y = e.clientY - rect.top;
-            
-            document.addEventListener('mousemove', drag);
-            document.addEventListener('mouseup', stopDrag);
-            e.preventDefault();
-        }
-
-        function drag(e) {
-            if (!isDragging || !selectedElement) return;
-            
-            const canvas = document.getElementById('slide-canvas');
-            const canvasRect = canvas.getBoundingClientRect();
-            
-            let x = e.clientX - canvasRect.left - dragOffset.x;
-            let y = e.clientY - canvasRect.top - dragOffset.y;
-            
-            // Constrain to canvas bounds
-            x = Math.max(0, Math.min(x, canvas.offsetWidth - selectedElement.offsetWidth));
-            y = Math.max(0, Math.min(y, canvas.offsetHeight - selectedElement.offsetHeight));
-            
-            selectedElement.style.left = x + 'px';
-            selectedElement.style.top = y + 'px';
-            
-            updatePropertiesPosition();
-        }
-
-        function stopDrag() {
-            isDragging = false;
-            document.removeEventListener('mousemove', drag);
-            document.removeEventListener('mouseup', stopDrag);
-        }
-
-        function startResize(e, element) {
-            isResizing = true;
-            const handle = e.target.classList[1]; // Get handle direction
-            
-            // Store initial state
-            const initialRect = {
-                left: parseInt(element.style.left),
-                top: parseInt(element.style.top),
-                width: element.offsetWidth,
-                height: element.offsetHeight
-            };
-            
-            function resizeHandler(e) {
-                resize(e, element, handle, initialRect);
             }
             
-            function stopResizeHandler() {
-                stopResize(resizeHandler, stopResizeHandler);
-            }
+            selectedElement = element;
+            element.classList.add('selected');
             
-            document.addEventListener('mousemove', resizeHandler);
-            document.addEventListener('mouseup', stopResizeHandler);
-            e.preventDefault();
-            e.stopPropagation();
+            // Show and update properties panel
+            const propsPanel = document.getElementById('element-properties');
+            propsPanel.style.display = 'block';
+            
+            document.getElementById('prop-font-size').value = element.dataset.fontSize || 18;
+            document.getElementById('prop-content').value = element.textContent;
         }
-
-        function resize(e, element, handle, initialRect) {
-            if (!isResizing) return;
-            
-            const canvas = document.getElementById('slide-canvas');
-            const canvasRect = canvas.getBoundingClientRect();
-            const mouseX = e.clientX - canvasRect.left;
-            const mouseY = e.clientY - canvasRect.top;
-            
-            let newLeft = initialRect.left;
-            let newTop = initialRect.top;
-            let newWidth = initialRect.width;
-            let newHeight = initialRect.height;
-            
-            // Handle different resize directions
-            if (handle.includes('e')) {
-                newWidth = Math.max(50, mouseX - initialRect.left);
-            }
-            if (handle.includes('w')) {
-                const deltaX = mouseX - initialRect.left;
-                newWidth = Math.max(50, initialRect.width - deltaX);
-                newLeft = initialRect.left + deltaX;
-            }
-            if (handle.includes('s')) {
-                newHeight = Math.max(30, mouseY - initialRect.top);
-            }
-            if (handle.includes('n')) {
-                const deltaY = mouseY - initialRect.top;
-                newHeight = Math.max(30, initialRect.height - deltaY);
-                newTop = initialRect.top + deltaY;
-            }
-            
-            // Apply constraints
-            newLeft = Math.max(0, Math.min(newLeft, canvas.offsetWidth - newWidth));
-            newTop = Math.max(0, Math.min(newTop, canvas.offsetHeight - newHeight));
-            newWidth = Math.min(newWidth, canvas.offsetWidth - newLeft);
-            newHeight = Math.min(newHeight, canvas.offsetHeight - newTop);
-            
-            element.style.left = newLeft + 'px';
-            element.style.top = newTop + 'px';
-            element.style.width = newWidth + 'px';
-            element.style.height = newHeight + 'px';
-            
-            updatePropertiesSize();
-            updatePropertiesPosition();
-        }
-
-        function stopResize(resizeHandler, stopResizeHandler) {
-            isResizing = false;
-            document.removeEventListener('mousemove', resizeHandler);
-            document.removeEventListener('mouseup', stopResizeHandler);
-        }
-
-        function showProperties(element) {
-            const panel = document.getElementById('properties-panel');
-            panel.classList.add('active');
-            
-            // Populate form fields
-            document.getElementById('element-content').value = element.dataset.content || '';
-            document.getElementById('element-font').value = element.dataset.fontName || 'Arial';
-            document.getElementById('element-font-size').value = element.dataset.fontSize || '18';
-            document.getElementById('element-list-type').value = element.dataset.listType || 'none';
-            
-            updatePropertiesPosition();
-            updatePropertiesSize();
-        }
-
-        function hideProperties() {
-            const panel = document.getElementById('properties-panel');
-            panel.classList.remove('active');
-        }
-
-        function updatePropertiesPosition() {
+        
+        function updateElementProperty(property) {
             if (!selectedElement) return;
             
-            // Convert pixels to inches using 16:9 ratio: 800px = 13.333", 450px = 7.5"
-            const x = (parseInt(selectedElement.style.left) / CANVAS_WIDTH) * SLIDE_WIDTH_INCHES;
-            const y = (parseInt(selectedElement.style.top) / CANVAS_HEIGHT) * SLIDE_HEIGHT_INCHES;
-            
-            document.getElementById('element-x').value = x.toFixed(2);
-            document.getElementById('element-y').value = y.toFixed(2);
-        }
-
-        function updatePropertiesSize() {
-            if (!selectedElement) return;
-            
-            // Convert pixels to inches using 16:9 ratio
-            const width = (selectedElement.offsetWidth / CANVAS_WIDTH) * SLIDE_WIDTH_INCHES;
-            const height = (selectedElement.offsetHeight / CANVAS_HEIGHT) * SLIDE_HEIGHT_INCHES;
-            
-            document.getElementById('element-width').value = width.toFixed(2);
-            document.getElementById('element-height').value = height.toFixed(2);
-        }
-
-        function updateSelectedElement() {
-            if (!selectedElement) return;
-            
-            const content = document.getElementById('element-content').value;
-            const fontName = document.getElementById('element-font').value;
-            const fontSize = document.getElementById('element-font-size').value;
-            const listType = document.getElementById('element-list-type').value;
-            
-            selectedElement.dataset.content = content;
-            selectedElement.dataset.fontName = fontName;
-            selectedElement.dataset.fontSize = fontSize;
-            selectedElement.dataset.listType = listType;
-            
-            if (selectedElement.dataset.type !== 'image') {
+            if (property === 'fontSize') {
+                const fontSize = document.getElementById('prop-font-size').value;
+                selectedElement.style.fontSize = `${fontSize}px`;
+                selectedElement.dataset.fontSize = fontSize;
+            } else if (property === 'content') {
+                const content = document.getElementById('prop-content').value;
                 selectedElement.textContent = content;
-                selectedElement.style.fontSize = fontSize + 'px';
-                selectedElement.style.fontFamily = fontName;
             }
         }
-
-        function updateSelectedElementPosition() {
-            if (!selectedElement) return;
-            
-            // Convert inches to pixels using 16:9 ratio
-            const x = (parseFloat(document.getElementById('element-x').value) / SLIDE_WIDTH_INCHES) * CANVAS_WIDTH;
-            const y = (parseFloat(document.getElementById('element-y').value) / SLIDE_HEIGHT_INCHES) * CANVAS_HEIGHT;
-            
-            selectedElement.style.left = x + 'px';
-            selectedElement.style.top = y + 'px';
-        }
-
-        function updateSelectedElementSize() {
-            if (!selectedElement) return;
-            
-            // Convert inches to pixels using 16:9 ratio
-            const width = (parseFloat(document.getElementById('element-width').value) / SLIDE_WIDTH_INCHES) * CANVAS_WIDTH;
-            const height = (parseFloat(document.getElementById('element-height').value) / SLIDE_HEIGHT_INCHES) * CANVAS_HEIGHT;
-            
-            selectedElement.style.width = width + 'px';
-            selectedElement.style.height = height + 'px';
-        }
-
+        
         function deleteSelectedElement() {
             if (selectedElement) {
                 selectedElement.remove();
                 selectedElement = null;
-                hideProperties();
+                document.getElementById('element-properties').style.display = 'none';
+            }
+        }
+        
+        function makeDraggable(element) {
+            let isDragging = false;
+            let startX, startY, initialLeft, initialTop;
+            
+            element.addEventListener('mousedown', function(e) {
+                if (e.target.classList.contains('resize-handle')) return;
+                
+                isDragging = true;
+                startX = e.clientX;
+                startY = e.clientY;
+                initialLeft = element.offsetLeft;
+                initialTop = element.offsetTop;
+                
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            });
+            
+            function onMouseMove(e) {
+                if (!isDragging) return;
+                
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+                
+                element.style.left = `${initialLeft + dx}px`;
+                element.style.top = `${initialTop + dy}px`;
+            }
+            
+            function onMouseUp() {
+                isDragging = false;
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
             }
         }
 
-        function clearSlide() {
-            const canvas = document.getElementById('slide-canvas');
-            canvas.innerHTML = '';
-            deselectElement();
-        }
-
-        function updateSlideType() {
-            const currentSlideType = document.getElementById('slide-type').value;
-            const canvas = document.getElementById('slide-canvas');
-            const statusEl = document.getElementById('layout-status');
-            
-            // Save the current layout before switching
-            const previousSlideType = canvas.classList.contains('title-slide') ? 'title' : 'content';
-            if (canvas.children.length > 0) {
-                savedLayouts[previousSlideType] = getLayoutData();
-                console.log(`Saved ${previousSlideType} layout:`, savedLayouts[previousSlideType]);
-            }
-            
-            // Clear existing elements
-            clearSlide();
-            
-            // Remove existing slide type classes
-            canvas.classList.remove('title-slide', 'content-slide');
-            
-            // Add new slide type class
-            canvas.classList.add(currentSlideType + '-slide');
-            
-            // Load saved layout if available, otherwise load current template
-            if (savedLayouts[currentSlideType]) {
-                console.log(`Loading saved ${currentSlideType} layout`);
-                loadLayoutData(savedLayouts[currentSlideType]);
-                statusEl.textContent = `Custom ${currentSlideType} layout loaded`;
-            } else if (STANDARD_TEMPLATES[currentTemplate] && STANDARD_TEMPLATES[currentTemplate][currentSlideType]) {
-                console.log(`Loading ${currentTemplate} ${currentSlideType} template`);
-                loadLayoutData({
-                    slide_type: currentSlideType,
-                    elements: STANDARD_TEMPLATES[currentTemplate][currentSlideType].elements
-                });
-                // Save this as the default layout
-                savedLayouts[currentSlideType] = getLayoutData();
-                const templateName = currentTemplate === 'standard' ? 'Standard' : 'My Content';
-                statusEl.textContent = `${templateName} ${currentSlideType} template loaded`;
-            }
-            
-            console.log('Slide type changed to:', currentSlideType);
-        }
-
-        function changeTemplate() {
-            const templateSelector = document.getElementById('template-selector');
-            currentTemplate = templateSelector.value;
-            
-            // Clear saved layouts to force reload from new template
-            savedLayouts = {
-                title: null,
-                content: null
-            };
-            
-            // Reload current slide type with new template
-            updateSlideType();
-            
-            console.log('Template changed to:', currentTemplate);
-        }
-
-        function saveLayout() {
-            const layoutData = getLayoutData();
-            const name = prompt('Layout name:');
-            if (name) {
-                localStorage.setItem('ppt_layout_' + name, JSON.stringify(layoutData));
-                alert('Layout saved!');
-            }
-        }
-
-        function loadLayout() {
-            const name = prompt('Layout name to load:');
-            if (name) {
-                const saved = localStorage.getItem('ppt_layout_' + name);
-                if (saved) {
-                    loadLayoutData(JSON.parse(saved));
-                    alert('Layout loaded!');
+        // Progress step management
+        function updateProgressSteps() {
+            for (let i = 1; i <= 5; i++) {
+                const step = document.getElementById(`step-${i}`);
+                if (i < currentStep) {
+                    step.classList.add('completed');
+                    step.classList.remove('active');
+                } else if (i === currentStep) {
+                    step.classList.add('active');
+                    step.classList.remove('completed');
                 } else {
-                    alert('Layout not found!');
+                    step.classList.remove('active', 'completed');
                 }
             }
         }
 
-        function getLayoutData() {
-            const canvas = document.getElementById('slide-canvas');
-            const elements = Array.from(canvas.children).map(el => ({
-                type: el.dataset.type,
-                left: (parseInt(el.style.left) / CANVAS_WIDTH) * SLIDE_WIDTH_INCHES,
-                top: (parseInt(el.style.top) / CANVAS_HEIGHT) * SLIDE_HEIGHT_INCHES,
-                width: (el.offsetWidth / CANVAS_WIDTH) * SLIDE_WIDTH_INCHES,
-                height: (el.offsetHeight / CANVAS_HEIGHT) * SLIDE_HEIGHT_INCHES,
-                content: el.dataset.content || '',
-                font_size: parseInt(el.dataset.fontSize) || 18,
-                font_name: el.dataset.fontName || 'Arial',
-                list_type: el.dataset.listType || 'none'
-            }));
-            
-            return {
-                slide_type: document.getElementById('slide-type').value,
-                elements: elements
-            };
+        function moveToStep(step) {
+            currentStep = step;
+            updateProgressSteps();
         }
 
-        function loadLayoutData(data) {
-            clearSlide();
-            document.getElementById('slide-type').value = data.slide_type;
-            
-            // Apply slide type styling without triggering clearSlide again
-            const canvas = document.getElementById('slide-canvas');
-            canvas.classList.remove('title-slide', 'content-slide');
-            canvas.classList.add(data.slide_type + '-slide');
-            
-            data.elements.forEach(elementData => {
-                const element = document.createElement('div');
-                element.className = `slide-element ${elementData.type}`;
-                element.id = `element-${++elementCounter}`;
-                
-                // Convert inches to pixels using 16:9 ratio
-                element.style.left = ((elementData.left / SLIDE_WIDTH_INCHES) * CANVAS_WIDTH) + 'px';
-                element.style.top = ((elementData.top / SLIDE_HEIGHT_INCHES) * CANVAS_HEIGHT) + 'px';
-                element.style.width = ((elementData.width / SLIDE_WIDTH_INCHES) * CANVAS_WIDTH) + 'px';
-                element.style.height = ((elementData.height / SLIDE_HEIGHT_INCHES) * CANVAS_HEIGHT) + 'px';
-                
-                element.dataset.type = elementData.type;
-                element.dataset.content = elementData.content;
-                element.dataset.fontSize = elementData.font_size;
-                element.dataset.fontName = elementData.font_name;
-                element.dataset.listType = elementData.list_type;
-                
-                if (elementData.type !== 'image') {
-                    element.textContent = elementData.content;
-                    element.style.fontSize = elementData.font_size + 'px';
-                    element.style.fontFamily = elementData.font_name;
-                } else {
-                    element.textContent = 'IMAGE';
-                }
-                
-                setupElementEvents(element);
-                document.getElementById('slide-canvas').appendChild(element);
-            });
-        }
-
-        async function generateCode() {
-            const layoutData = getLayoutData();
-            
-            try {
-                const response = await fetch('/generate_code', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(layoutData)
-                });
-                
-                const result = await response.json();
-                generatedCode = result.code;
-                generatedFilename = result.filename;
-                
-                document.getElementById('code-output').textContent = generatedCode;
-                document.getElementById('code-modal').classList.add('active');
-            } catch (error) {
-                alert('Error generating code: ' + error.message);
-            }
-        }
-
-        function copyCode() {
-            navigator.clipboard.writeText(generatedCode).then(() => {
-                alert('Code copied to clipboard!');
-            });
-        }
-
-        async function downloadCode() {
-            try {
-                const response = await fetch('/download_code', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        code: generatedCode,
-                        filename: generatedFilename
-                    })
-                });
-                
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.style.display = 'none';
-                a.href = url;
-                a.download = generatedFilename;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
-            } catch (error) {
-                alert('Error downloading file: ' + error.message);
-            }
-        }
-
-        function closeModal() {
-            document.getElementById('code-modal').classList.remove('active');
-        }
-
+        // Show/hide loading
         function showLoading(message = 'Loading...') {
             const overlay = document.getElementById('loading-overlay');
-            const content = overlay.querySelector('.loading-content p');
-            content.textContent = message;
+            const text = document.getElementById('loading-text');
+            text.textContent = message;
             overlay.style.display = 'flex';
         }
 
@@ -1295,14 +1270,21 @@
             overlay.style.display = 'none';
         }
 
-        // Content Generation Functions
+        // Main workflow functions
         async function generateDraft() {
             const topic = document.getElementById('presentation-topic').value.trim();
+            const audience = document.getElementById('audience').value.trim();
+            
             if (!topic) {
-                alert('Please enter a presentation topic first.');
+                alert('Please enter a presentation topic.');
                 return;
             }
 
+            currentTopic = topic;
+            currentAudience = audience;
+            
+            showLoading('Generating presentation outline...');
+            
             try {
                 const response = await fetch('/generate_draft', {
                     method: 'POST',
@@ -1316,157 +1298,34 @@
                 
                 if (response.ok) {
                     currentSlides = result.slides;
-                    currentTopic = result.topic;
-                    alert('Draft generated successfully! Use "Content Planner" to review and edit.');
-                    updateContentPlanner();
+                    moveToStep(2);
+                    
+                    // Show slides section and hide empty state
+                    document.getElementById('slides-content').classList.add('active');
+                    document.getElementById('empty-state').style.display = 'none';
+                    
+                    // Enable next button
+                    document.getElementById('generate-content-btn').disabled = false;
+                    
+                    renderSlidesList();
                 } else {
                     alert('Error: ' + result.error);
                 }
             } catch (error) {
                 alert('Error generating draft: ' + error.message);
+            } finally {
+                hideLoading();
             }
         }
 
-        function showContentPlanner() {
-            updateContentPlanner();
-            document.getElementById('content-modal').classList.add('active');
-        }
-
-        function closeContentModal() {
-            document.getElementById('content-modal').classList.remove('active');
-        }
-
-        function updateContentPlanner() {
-            const draftSection = document.getElementById('draft-section');
-            const noDraftSection = document.getElementById('no-draft-section');
-            
-            if (currentSlides.length > 0) {
-                draftSection.style.display = 'block';
-                noDraftSection.style.display = 'none';
-                renderSlidesList();
-            } else {
-                draftSection.style.display = 'none';
-                noDraftSection.style.display = 'block';
-            }
-        }
-
-        function renderSlidesList() {
-            const slidesList = document.getElementById('slides-list');
-            slidesList.innerHTML = '';
-
-            currentSlides.forEach((slide, index) => {
-                const slideDiv = document.createElement('div');
-                slideDiv.className = 'slide-item';
-                
-                // For title slides, show subtitle/description in content area, for content slides show the content
-                let displayContent, contentPlaceholder;
-                if (slide.type === 'title') {
-                    displayContent = slide.content || '';
-                    contentPlaceholder = 'Optional subtitle or description...';
-                } else {
-                    displayContent = slide.content;
-                    contentPlaceholder = 'Content will be generated...';
-                }
-                
-                slideDiv.innerHTML = `
-                    <div class="slide-number">${index + 1}</div>
-                    <div class="slide-header">
-                        <span class="slide-type-badge ${slide.type}">${slide.type}</span>
-                        <input type="text" class="slide-title" value="${slide.title}" 
-                               onchange="updateSlideTitle(${index}, this.value)"
-                               placeholder="${slide.type === 'title' ? 'Main presentation title' : 'Slide title'}">
-                    </div>
-                    <div class="slide-content">
-                        <textarea placeholder="${contentPlaceholder}" 
-                                  onchange="updateSlideContent(${index}, this.value)">${displayContent}</textarea>
-                        ${slide.suggested_image_prompt ? `
-                            <div class="image-prompt-section" style="margin-top: 10px; padding: 8px; background: #e8f4f8; border-radius: 4px; border: 1px solid #bee5eb;">
-                                <label style="font-size: 12px; color: #0c5460; font-weight: bold;">Suggested Image Prompt:</label>
-                                <textarea placeholder="AI-generated image prompt..." 
-                                          onchange="updateImagePrompt(${index}, this.value)"
-                                          style="width: 100%; min-height: 60px; margin-top: 4px; font-size: 12px; resize: vertical; border: 1px solid #bee5eb; border-radius: 3px; padding: 4px;">${slide.suggested_image_prompt}</textarea>
-                            </div>
-                        ` : ''}
-                        ${slide.generated_image ? `
-                            <div class="generated-image" style="margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 4px; border: 1px solid #dee2e6;">
-                                <img src="${slide.generated_image}" alt="${slide.image_caption || 'Generated image'}" style="max-width: 200px; max-height: 150px; border-radius: 4px;">
-                                <p style="margin: 5px 0 0 0; font-size: 12px; color: #6c757d;">${slide.image_caption || 'Generated image'}</p>
-                            </div>
-                        ` : ''}
-                    </div>
-                    <div class="slide-actions">
-                        <button class="btn-up" onclick="moveSlide(${index}, -1)">↑ Up</button>
-                        <button class="btn-down" onclick="moveSlide(${index}, 1)">↓ Down</button>
-                        <button class="btn-generate-image" onclick="generateSlideImage(${index})" style="background: #9b59b6; color: white;">🎨 Generate Image</button>
-                        <button class="btn-delete" onclick="deleteSlide(${index})">Delete</button>
-                    </div>
-                `;
-                slidesList.appendChild(slideDiv);
-            });
-        }
-
-        function updateSlideTitle(index, title) {
-            currentSlides[index].title = title;
-        }
-
-        function updateSlideContent(index, content) {
-            currentSlides[index].content = content;
-        }
-
-        function updateImagePrompt(index, prompt) {
-            currentSlides[index].suggested_image_prompt = prompt;
-        }
-
-        function addSlide() {
-            const newSlide = {
-                id: currentSlides.length,
-                title: 'New Slide Title',
-                type: 'content',
-                content: 'New slide content...'
-            };
-            currentSlides.push(newSlide);
-            renderSlidesList();
-        }
-
-        function deleteSlide(index) {
-            if (confirm('Are you sure you want to delete this slide?')) {
-                currentSlides.splice(index, 1);
-                // Update IDs
-                currentSlides.forEach((slide, i) => slide.id = i);
-                renderSlidesList();
-            }
-        }
-
-        function moveSlide(index, direction) {
-            const newIndex = index + direction;
-            if (newIndex >= 0 && newIndex < currentSlides.length) {
-                const temp = currentSlides[index];
-                currentSlides[index] = currentSlides[newIndex];
-                currentSlides[newIndex] = temp;
-                
-                // Update IDs
-                currentSlides.forEach((slide, i) => slide.id = i);
-                renderSlidesList();
-            }
-        }
-
-        async function generateFullContent() {
+        async function generateContent() {
             if (currentSlides.length === 0) {
-                alert('No slides to generate content for.');
+                alert('Please generate a draft first.');
                 return;
             }
 
-            // Get current content layout for character limit calculation
-            const contentLayout = getLayoutForType('content');
-
-            // Show loading indicator
-            showLoading('Generating content...');
+            showLoading('Generating slide content...');
             
-            // Disable the button
-            const button = document.getElementById('generate-content-btn');
-            button.disabled = true;
-            button.textContent = 'Generating...';
-
             try {
                 const response = await fetch('/generate_content', {
                     method: 'POST',
@@ -1476,7 +1335,7 @@
                     body: JSON.stringify({
                         slides: currentSlides,
                         topic: currentTopic,
-                        content_layout: contentLayout
+                        audience: currentAudience
                     })
                 });
 
@@ -1484,11 +1343,11 @@
                 
                 if (response.ok) {
                     currentSlides = result.slides;
+                    moveToStep(3);
                     
-                    // NEW: Generate image prompts separately
+                    // Generate image prompts
                     for (let i = 0; i < currentSlides.length; i++) {
                         if (currentSlides[i].type === 'content') {
-                            // Generate simple image prompt for each content slide
                             const promptResponse = await fetch('/generate_image_prompt', {
                                 method: 'POST',
                                 headers: {'Content-Type': 'application/json'},
@@ -1505,21 +1364,69 @@
                         }
                     }
                     
+                    // Enable next button
+                    document.getElementById('generate-images-btn').disabled = false;
+                    
                     renderSlidesList();
-                    // Success message will be shown briefly
-                    setTimeout(() => {
-                        alert('Content generated successfully!');
-                    }, 500);
                 } else {
                     alert('Error: ' + result.error);
                 }
             } catch (error) {
                 alert('Error generating content: ' + error.message);
             } finally {
-                // Hide loading and re-enable button
                 hideLoading();
-                button.disabled = false;
-                button.textContent = 'Generate Content';
+            }
+        }
+
+        async function generateAllImages() {
+            if (currentSlides.length === 0) {
+                alert('No slides available for image generation.');
+                return;
+            }
+
+            const slidesNeedingImages = currentSlides.filter(slide => !slide.generated_image);
+            if (slidesNeedingImages.length === 0) {
+                alert('All slides already have images.');
+                return;
+            }
+
+            showLoading(`Generating ${slidesNeedingImages.length} images...`);
+            
+            try {
+                const response = await fetch('/generate_images_bulk', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        slides: currentSlides
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    currentSlides = result.slides;
+                    moveToStep(4);
+                    
+                    // Enable create PowerPoint button
+                    document.getElementById('create-ppt-btn').disabled = false;
+                    
+                    renderSlidesList();
+                    
+                    const message = `Generated ${result.generated_count} images successfully!`;
+                    if (result.error_count > 0) {
+                        alert(message + ` ${result.error_count} failed.`);
+                    } else {
+                        alert(message);
+                    }
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('Error generating images: ' + error.message);
+            } finally {
+                hideLoading();
             }
         }
 
@@ -1529,29 +1436,12 @@
                 return;
             }
 
-            // Save the current layout before creating presentation
-            const currentSlideType = document.getElementById('slide-type').value;
-            savedLayouts[currentSlideType] = getLayoutData();
+            showLoading('Creating PowerPoint presentation...');
             
-            // Ensure we have layouts for both slide types
-            if (!savedLayouts.title) {
-                savedLayouts.title = {
-                    slide_type: 'title',
-                    elements: STANDARD_TEMPLATES[currentTemplate].title.elements
-                };
-            }
-            
-            if (!savedLayouts.content) {
-                savedLayouts.content = {
-                    slide_type: 'content',
-                    elements: STANDARD_TEMPLATES[currentTemplate].content.elements
-                };
-            }
-            
-            console.log('Using title layout:', savedLayouts.title);
-            console.log('Using content layout:', savedLayouts.content);
-
             try {
+                // Get current template layouts
+                const templateLayouts = getTemplateLayouts();
+                
                 const response = await fetch('/create_presentation', {
                     method: 'POST',
                     headers: {
@@ -1559,12 +1449,14 @@
                     },
                     body: JSON.stringify({
                         slides: currentSlides,
-                        title_layout: savedLayouts.title,
-                        content_layout: savedLayouts.content
+                        title_layout: templateLayouts.title,
+                        content_layout: templateLayouts.content
                     })
                 });
 
                 if (response.ok) {
+                    moveToStep(5);
+                    
                     // Download the presentation
                     const blob = await response.blob();
                     const url = window.URL.createObjectURL(blob);
@@ -1584,26 +1476,126 @@
                 }
             } catch (error) {
                 alert('Error creating presentation: ' + error.message);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Render slides list
+        function renderSlidesList() {
+            const slidesList = document.getElementById('slides-list');
+            slidesList.innerHTML = '';
+
+            currentSlides.forEach((slide, index) => {
+                const slideDiv = document.createElement('div');
+                slideDiv.className = 'slide-item';
+                
+                let contentHtml = '';
+                if (slide.type === 'title') {
+                    contentHtml = `
+                        <textarea placeholder="Optional subtitle or description..." 
+                                  onchange="updateSlideContent(${index}, this.value)">${slide.content || ''}</textarea>
+                    `;
+                } else {
+                    contentHtml = `
+                        <textarea placeholder="Content will be generated..." 
+                                  onchange="updateSlideContent(${index}, this.value)">${slide.content || ''}</textarea>
+                    `;
+                    
+                    if (slide.suggested_image_prompt) {
+                        contentHtml += `
+                            <div class="image-section">
+                                <label class="image-prompt-label">Image Prompt:</label>
+                                <textarea placeholder="AI-generated image prompt..." 
+                                          onchange="updateImagePrompt(${index}, this.value)"
+                                          style="width: 100%; min-height: 60px; font-size: 13px;">${slide.suggested_image_prompt}</textarea>
+                            </div>
+                        `;
+                    }
+                    
+                    if (slide.generated_image) {
+                        contentHtml += `
+                            <div class="generated-image">
+                                <img src="${slide.generated_image}" alt="${slide.image_caption || 'Generated image'}">
+                                <p style="margin-top: 10px; font-size: 13px; color: #6c757d;">${slide.image_caption || 'Generated image'}</p>
+                            </div>
+                        `;
+                    }
+                }
+                
+                slideDiv.innerHTML = `
+                    <div class="slide-number">${index + 1}</div>
+                    <div class="slide-header">
+                        <span class="slide-type-badge ${slide.type}">${slide.type}</span>
+                        <input type="text" class="slide-title" value="${slide.title}" 
+                               onchange="updateSlideTitle(${index}, this.value)"
+                               placeholder="${slide.type === 'title' ? 'Main presentation title' : 'Slide title'}">
+                    </div>
+                    <div class="slide-content">
+                        ${contentHtml}
+                    </div>
+                    <div class="slide-actions">
+                        <button class="btn-move" onclick="moveSlide(${index}, -1)">↑ Up</button>
+                        <button class="btn-move" onclick="moveSlide(${index}, 1)">↓ Down</button>
+                        ${slide.type === 'content' && !slide.generated_image ? `
+                            <button class="btn-generate-image" onclick="generateSlideImage(${index})">🎨 Generate Image</button>
+                        ` : ''}
+                        <button class="btn-delete" onclick="deleteSlide(${index})">Delete</button>
+                    </div>
+                `;
+                slidesList.appendChild(slideDiv);
+            });
+        }
+
+        // Slide management functions
+        function updateSlideTitle(index, title) {
+            currentSlides[index].title = title;
+        }
+
+        function updateSlideContent(index, content) {
+            currentSlides[index].content = content;
+        }
+
+        function updateImagePrompt(index, prompt) {
+            currentSlides[index].suggested_image_prompt = prompt;
+        }
+
+        function addSlide() {
+            const newSlide = {
+                id: currentSlides.length,
+                title: 'New Slide Title',
+                type: 'content',
+                content: ''
+            };
+            currentSlides.push(newSlide);
+            renderSlidesList();
+        }
+
+        function deleteSlide(index) {
+            if (confirm('Are you sure you want to delete this slide?')) {
+                currentSlides.splice(index, 1);
+                currentSlides.forEach((slide, i) => slide.id = i);
+                renderSlidesList();
+            }
+        }
+
+        function moveSlide(index, direction) {
+            const newIndex = index + direction;
+            if (newIndex >= 0 && newIndex < currentSlides.length) {
+                const temp = currentSlides[index];
+                currentSlides[index] = currentSlides[newIndex];
+                currentSlides[newIndex] = temp;
+                currentSlides.forEach((slide, i) => slide.id = i);
+                renderSlidesList();
             }
         }
 
         async function generateSlideImage(slideIndex) {
             const slide = currentSlides[slideIndex];
-            if (!slide) {
-                alert('Slide not found.');
-                return;
-            }
+            if (!slide) return;
 
-            // Show loading indicator
-            showLoading('Generating educational diagram...');
+            showLoading('Generating image...');
             
-            // Disable the button
-            const button = document.querySelector(`button[onclick="generateSlideImage(${slideIndex})"]`);
-            if (button) {
-                button.disabled = true;
-                button.textContent = '🎨 Generating...';
-            }
-
             try {
                 const response = await fetch('/generate_image', {
                     method: 'POST',
@@ -1620,99 +1612,140 @@
                 const result = await response.json();
                 
                 if (response.ok) {
-                    // Store the generated image data in the slide
                     currentSlides[slideIndex].generated_image = result.image_url;
                     currentSlides[slideIndex].image_caption = result.caption;
-                    
-                    // Refresh the slides list to show the image
                     renderSlidesList();
-                    
-                    alert('Educational diagram generated successfully!');
                 } else {
                     alert('Error: ' + result.error);
                 }
             } catch (error) {
                 alert('Error generating image: ' + error.message);
             } finally {
-                // Hide loading and re-enable button
                 hideLoading();
-                if (button) {
-                    button.disabled = false;
-                    button.textContent = '🎨 Generate Image';
-                }
             }
         }
 
-        async function generateAllImages() {
-            if (currentSlides.length === 0) {
-                alert('No slides available for image generation.');
-                return;
-            }
-
-            // Count slides that need images
-            const slidesNeedingImages = currentSlides.filter(slide => !slide.generated_image);
-            if (slidesNeedingImages.length === 0) {
-                alert('All slides already have images generated.');
-                return;
-            }
-
-            // Show loading indicator
-            showLoading(`Generating ${slidesNeedingImages.length} educational diagrams concurrently...`);
+        // Get template layouts
+        function getTemplateLayouts() {
+            const selectedRadio = document.querySelector('input[name="template"]:checked');
+            const selectedTemplate = selectedRadio ? selectedRadio.value : 'with-image';
             
-            // Disable the button
-            const button = document.getElementById('generate-all-images-btn');
-            if (button) {
-                button.disabled = true;
-                button.textContent = '🎨 Generating All...';
-            }
+            return templateLayouts[selectedTemplate] || templateLayouts['with-image'];
+        }
 
-            try {
-                const response = await fetch('/generate_images_bulk', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        slides: currentSlides
-                    })
-                });
+        // Template editor element management
+        function addElement(type) {
+            const canvas = document.getElementById('slide-canvas');
+            const canvasRect = canvas.getBoundingClientRect();
+            
+            // Default properties for new elements
+            const defaults = {
+                title: { width: 600, height: 80, fontSize: 32, content: 'Title Text' },
+                textbox: { width: 500, height: 300, fontSize: 18, content: 'Text content' },
+                image: { width: 400, height: 300, fontSize: 16, content: 'IMAGE PLACEHOLDER' }
+            };
+            
+            const props = defaults[type];
+            const element = createCanvasElement(
+                type,
+                50, // Default left position
+                50, // Default top position
+                props.width,
+                props.height,
+                props.content,
+                props.fontSize
+            );
+            
+            canvas.appendChild(element);
+            selectElement(element);
+        }
 
-                const result = await response.json();
-                
-                if (response.ok) {
-                    // Update the slides with the results
-                    currentSlides = result.slides;
-                    
-                    // Refresh the slides list to show all images
-                    renderSlidesList();
-                    
-                    const message = `Generated ${result.generated_count} diagrams successfully!`;
-                    if (result.error_count > 0) {
-                        alert(message + ` ${result.error_count} failed to generate.`);
-                    } else {
-                        alert(message);
-                    }
-                } else {
-                    alert('Error: ' + result.error);
-                }
-            } catch (error) {
-                alert('Error generating images: ' + error.message);
-            } finally {
-                // Hide loading and re-enable button
-                hideLoading();
-                if (button) {
-                    button.disabled = false;
-                    button.textContent = '🎨 Generate All Images';
-                }
+        function clearSlide() {
+            if (confirm('Clear all elements from the current slide?')) {
+                const canvas = document.getElementById('slide-canvas');
+                canvas.innerHTML = '';
+                selectedElement = null;
+                document.getElementById('element-properties').style.display = 'none';
             }
         }
 
-        function getLayoutForType(slideType) {
-            // Return the current layout configuration
-            // This could be enhanced to have separate layouts for title vs content slides
-            const layoutData = getLayoutData();
-            layoutData.slide_type = slideType;
-            return layoutData;
+        function saveTemplate() {
+            if (!currentEditingTemplate) return;
+            
+            const slideType = document.getElementById('slide-type').value;
+            const canvas = document.getElementById('slide-canvas');
+            const elements = Array.from(canvas.querySelectorAll('.canvas-element'));
+            
+            // Convert canvas elements to template format
+            const templateElements = elements.map(elem => {
+                const rect = elem.getBoundingClientRect();
+                const canvasRect = canvas.getBoundingClientRect();
+                
+                return {
+                    type: elem.dataset.type,
+                    left: (elem.offsetLeft / 72), // Convert pixels to inches
+                    top: (elem.offsetTop / 72),
+                    width: (elem.offsetWidth / 72),
+                    height: (elem.offsetHeight / 72),
+                    content: elem.textContent,
+                    font_size: parseInt(elem.dataset.fontSize) || 18,
+                    font_name: 'Calibri',
+                    list_type: elem.dataset.type === 'textbox' ? 'bullet' : 'none'
+                };
+            });
+            
+            // Initialize template structure if needed
+            if (!templateLayouts[currentEditingTemplate]) {
+                templateLayouts[currentEditingTemplate] = {
+                    title: { slide_type: 'title', elements: [] },
+                    content: { slide_type: 'content', elements: [] }
+                };
+            }
+            
+            // Save the layout
+            templateLayouts[currentEditingTemplate][slideType] = {
+                slide_type: slideType,
+                elements: templateElements
+            };
+            
+            // Save to localStorage
+            localStorage.setItem('customTemplates', JSON.stringify(templateLayouts));
+            
+            alert('Template saved successfully!');
+            closeTemplateEditor();
+        }
+        
+        function resetTemplate() {
+            if (!currentEditingTemplate || currentEditingTemplate === 'new') return;
+            
+            if (confirm('Reset this template to its default layout? This cannot be undone.')) {
+                // Reset to original template
+                templateLayouts[currentEditingTemplate] = JSON.parse(JSON.stringify(originalTemplates[currentEditingTemplate]));
+                
+                // Save to localStorage
+                localStorage.setItem('customTemplates', JSON.stringify(templateLayouts));
+                
+                // Reload template in editor
+                const canvas = document.getElementById('slide-canvas');
+                canvas.innerHTML = '';
+                loadTemplateIntoEditor(templateLayouts[currentEditingTemplate]);
+                
+                alert('Template reset to default.');
+            }
+        }
+
+        function updateSlideType() {
+            if (!currentEditingTemplate || currentEditingTemplate === 'new') return;
+            
+            // Clear canvas and load the appropriate slide type
+            const canvas = document.getElementById('slide-canvas');
+            canvas.innerHTML = '';
+            selectedElement = null;
+            document.getElementById('element-properties').style.display = 'none';
+            
+            if (templateLayouts[currentEditingTemplate]) {
+                loadTemplateIntoEditor(templateLayouts[currentEditingTemplate]);
+            }
         }
     </script>
 </body>
